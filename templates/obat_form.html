@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Obat{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 720px">
+  <div class="card-body">
+    <h4 class="mb-1">{{ 'Edit' if edit else 'Tambah' }} Obat</h4>
+    <p class="text-muted">Pasien: <strong>{{ pasien.nama }}</strong></p>
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Nama Obat *</label><input class="form-control" name="nama" value="{{ o.nama or '' }}" placeholder="Amlodipine" required></div>
+        <div class="col-md-3"><label class="form-label">Dosis *</label><input class="form-control" name="dosis" value="{{ o.dosis or '' }}" placeholder="5" required></div>
+        <div class="col-md-3"><label class="form-label">Satuan</label>
+          <input class="form-control" name="satuan" list="satuan-list" value="{{ o.satuan or '' }}" placeholder="mg">
+          <datalist id="satuan-list">{% for s in ['mg', 'mcg', 'g', 'ml', 'IU', 'unit', 'tablet', 'kapsul', 'tetes', 'puff', 'sachet'] %}<option value="{{ s }}">{% endfor %}</datalist>
+        </div>
+        <div class="col-md-6"><label class="form-label">Rute Pemberian</label>
+          <select class="form-select" name="rute">{% for r in RUTE %}<option {% if o.rute == r %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+        </div>
+        <div class="col-md-6"><label class="form-label">Frekuensi / Aturan Pakai</label><input class="form-control" name="frekuensi" value="{{ o.frekuensi or '' }}" placeholder="2x sehari sesudah makan"></div>
+        <div class="col-md-6"><label class="form-label">Tanggal Mulai</label><input type="date" class="form-control" name="tanggal_mulai" value="{{ o.tanggal_mulai or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Tanggal Selesai</label><input type="date" class="form-control" name="tanggal_selesai" value="{{ o.tanggal_selesai or '' }}"></div>
+        <div class="col-12"><label class="form-label">Keterangan</label><textarea class="form-control" name="keterangan" rows="2">{{ o.keterangan or '' }}</textarea></div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary">Simpan</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('pasien_detail', pasien_id=pasien.id, tab='obat') }}">Batal</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

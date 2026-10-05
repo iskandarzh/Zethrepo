@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, status_jadwal, aksi_jadwal %}
+{% block title %}{{ pasien.nama }}{% endblock %}
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap justify-content-between gap-3">
+    <div>
+      <h3 class="mb-1">{{ pasien.nama }}</h3>
+      <div class="text-muted">
+        No. RM: {{ pasien.no_rm or '-' }} &middot;
+        {{ {'L': 'Laki-laki', 'P': 'Perempuan'}.get(pasien.jenis_kelamin, '-') }} &middot;
+        Umur: {{ pasien.tanggal_lahir|umur }} tahun
+      </div>
+      {% if pasien.catatan %}<div class="mt-2"><i class="bi bi-info-circle"></i> {{ pasien.catatan }}</div>{% endif %}
+    </div>
+    <div class="d-flex gap-2 align-items-start">
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('pasien_edit', pasien_id=pasien.id) }}"><i class="bi bi-pencil"></i> Edit</a>
+      <form method="post" action="{{ url_for('pasien_hapus', pasien_id=pasien.id) }}" onsubmit="return confirm('Hapus pasien beserta seluruh datanya?')">
+        <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Hapus</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<ul class="nav nav-tabs" role="tablist">
+  <li class="nav-item"><button class="nav-link {% if tab == 'pengukuran' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-pengukuran" type="button"><i class="bi bi-activity"></i> Pengukuran ({{ pengukuran|length }})</button></li>
+  <li class="nav-item"><button class="nav-link {% if tab == 'obat' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-obat" type="button"><i class="bi bi-capsule"></i> Daftar Obat ({{ obat|length }})</button></li>
+  <li class="nav-item"><button class="nav-link {% if tab == 'jadwal' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-jadwal" type="button"><i class="bi bi-calendar-check"></i> Jadwal Obat ({{ jadwal|length }})</button></li>
+</ul>
+
+<div class="tab-content card border-top-0 rounded-0 rounded-bottom">
+  {# ---------- Pengukuran ---------- #}
+  <div class="tab-pane fade {% if tab == 'pengukuran' %}show active{% endif %} p-3" id="tab-pengukuran">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Riwayat Tensi & Gula Darah</h5>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('pengukuran_baru', pasien_id=pasien.id) }}"><i class="bi bi-plus-lg"></i> Input Pengukuran</a>
+    </div>
+    {% if pengukuran|length > 1 %}
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><canvas id="grafikTensi" height="160"></canvas></div>
+      <div class="col-md-6"><canvas id="grafikGula" height="160"></canvas></div>
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Waktu</th><th>Tensi (mmHg)</th><th>Nadi</th><th>Gula Darah (mg/dL)</th><th>Catatan</th><th></th></tr></thead>
+        <tbody>
+        {% for m in pengukuran %}
+          <tr>
+            <td>{{ m.waktu|tgl }}</td>
+            <td>{% if m.sistolik %}{{ m.sistolik }}/{{ m.diastolik }} {{ badge(kategori_tensi(m.sistolik, m.diastolik)) }}{% else %}-{% endif %}</td>
+            <td>{{ m.nadi or '-' }}</td>
+            <td>{% if m.gula_darah %}{{ m.gula_darah }} <small class="text-muted">{{ JENIS_GULA[m.jenis_gula] }}</small> {{ badge(kategori_gula(m.gula_darah, m.jenis_gula)) }}{% else %}-{% endif %}</td>
+            <td>{{ m.catatan or '' }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pengukuran_edit', mid=m.id) }}"><i class="bi bi-pencil"></i></a>
+              <form class="d-inline" method="post" action="{{ url_for('pengukuran_hapus', mid=m.id) }}" onsubmit="return confirm('Hapus pengukuran ini?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">Belum ada data pengukuran.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="small text-muted mt-2 mb-0">Kategori hanya sebagai acuan (Tensi: AHA/ACC 2017; Gula darah: ADA/PERKENI). Keputusan klinis tetap oleh tenaga kesehatan.</p>
+  </div>
+
+  {# ---------- Obat ---------- #}
+  <div class="tab-pane fade {% if tab == 'obat' %}show active{% endif %} p-3" id="tab-obat">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Daftar Obat yang Diberikan</h5>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('obat_baru', pasien_id=pasien.id) }}"><i class="bi bi-plus-lg"></i> Tambah Obat</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Nama Obat</th><th>Dosis</th><th>Rute</th><th>Frekuensi</th><th>Periode</th><th>Keterangan</th><th></th></tr></thead>
+        <tbody>
+        {% for o in obat %}
+          <tr>
+            <td class="fw-semibold">{{ o.nama }}</td>
+            <td>{{ o.dosis }} {{ o.satuan or '' }}</td>
+            <td>{{ o.rute or '-' }}</td>
+            <td>{{ o.frekuensi or '-' }}</td>
+            <td class="text-nowrap">{{ o.tanggal_mulai|tgl }} s/d {{ o.tanggal_selesai|tgl }}
+              {% if o.tanggal_selesai and o.tanggal_selesai < hari_ini %}<span class="badge text-bg-secondary">Selesai</span>{% else %}<span class="badge text-bg-success">Aktif</span>{% endif %}
+            </td>
+            <td>{{ o.keterangan or '' }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-success" href="{{ url_for('jadwal_baru', obat_id=o.id) }}" title="Buat jadwal"><i class="bi bi-calendar-plus"></i></a>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('obat_edit', obat_id=o.id) }}"><i class="bi bi-pencil"></i></a>
+              <form class="d-inline" method="post" action="{{ url_for('obat_hapus', obat_id=o.id) }}" onsubmit="return confirm('Hapus obat ini beserta seluruh jadwalnya?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">Belum ada obat.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ---------- Jadwal ---------- #}
+  <div class="tab-pane fade {% if tab == 'jadwal' %}show active{% endif %} p-3" id="tab-jadwal">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Jadwal Pemberian Obat</h5>
+      {% if obat %}
+      <div class="dropdown">
+        <button class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-calendar-plus"></i> Buat Jadwal</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          {% for o in obat %}<li><a class="dropdown-item" href="{{ url_for('jadwal_baru', obat_id=o.id) }}">{{ o.nama }} {{ o.dosis }} {{ o.satuan or '' }}</a></li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+    {% set next_url = url_for('pasien_detail', pasien_id=pasien.id, tab='jadwal') %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Tanggal</th><th>Jam</th><th>Obat</th><th>Dosis</th><th>Rute</th><th>Catatan</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
+        <tbody>
+        {% for j in jadwal %}
+          <tr class="{% if j.waktu[:10] == hari_ini %}table-info{% endif %}">
+            <td>{{ j.waktu[:10]|tgl }}</td>
+            <td class="fw-semibold">{{ j.waktu|jam }}</td>
+            <td>{{ j.nama_obat }}</td>
+            <td>{{ j.dosis }} {{ j.satuan or '' }}</td>
+            <td>{{ j.rute or '-' }}</td>
+            <td>{{ j.catatan or '' }}</td>
+            <td>{{ status_jadwal(j, sekarang) }}</td>
+            <td class="text-end text-nowrap">
+              {{ aksi_jadwal(j, next_url) }}
+              <form class="d-inline" method="post" action="{{ url_for('jadwal_hapus', jid=j.id) }}" onsubmit="return confirm('Hapus jadwal ini?')"><input type="hidden" name="next" value="{{ next_url }}"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="text-center text-muted py-4">{% if obat %}Belum ada jadwal. Klik "Buat Jadwal".{% else %}Tambahkan obat terlebih dahulu di tab Daftar Obat.{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if pengukuran|length > 1 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+const g = {{ grafik|tojson }};
+const opts = (title) => ({ responsive: true, spanGaps: true, plugins: { title: { display: true, text: title } } });
+new Chart(document.getElementById('grafikTensi'), {
+  type: 'line',
+  data: { labels: g.label, datasets: [
+    { label: 'Sistolik', data: g.sistolik, borderColor: '#dc3545', tension: .3 },
+    { label: 'Diastolik', data: g.diastolik, borderColor: '#0d6efd', tension: .3 } ] },
+  options: opts('Tekanan Darah (mmHg)')
+});
+new Chart(document.getElementById('grafikGula'), {
+  type: 'line',
+  data: { labels: g.label, datasets: [ { label: 'Gula Darah', data: g.gula, borderColor: '#198754', tension: .3 } ] },
+  options: opts('Gula Darah (mg/dL)')
+});
+</script>
+{% endif %}
+{% endblock %}
