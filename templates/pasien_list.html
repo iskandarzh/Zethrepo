@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Daftar Pasien{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h3 class="mb-0">Daftar Pasien</h3>
+  <form class="d-flex gap-2" method="get">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Cari nama / No. RM">
+    <button class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
+  </form>
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr><th>No. RM</th><th>Nama</th><th>L/P</th><th>Umur</th><th>Jumlah Obat</th><th>Pengukuran Terakhir</th><th></th></tr></thead>
+      <tbody>
+      {% for p in pasien %}
+        <tr>
+          <td>{{ p.no_rm or '-' }}</td>
+          <td><a class="fw-semibold" href="{{ url_for('pasien_detail', pasien_id=p.id) }}">{{ p.nama }}</a></td>
+          <td>{{ p.jenis_kelamin or '-' }}</td>
+          <td>{{ p.tanggal_lahir|umur }}</td>
+          <td>{{ p.jumlah_obat }}</td>
+          <td>{{ p.terakhir_ukur|tgl }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('pasien_detail', pasien_id=p.id) }}">Buka</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Belum ada pasien. <a href="{{ url_for('pasien_baru') }}">Tambah pasien</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

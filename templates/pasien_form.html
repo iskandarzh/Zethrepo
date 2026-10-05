@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if edit else 'Tambah' }} Pasien{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 640px">
+  <div class="card-body">
+    <h4 class="mb-3">{{ 'Edit' if edit else 'Tambah' }} Pasien</h4>
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label">No. Rekam Medis</label><input class="form-control" name="no_rm" value="{{ pasien.no_rm or '' }}"></div>
+        <div class="col-md-8"><label class="form-label">Nama Lengkap *</label><input class="form-control" name="nama" value="{{ pasien.nama or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Tanggal Lahir</label><input type="date" class="form-control" name="tanggal_lahir" value="{{ pasien.tanggal_lahir or '' }}"></div>
+        <div class="col-md-6"><label class="form-label">Jenis Kelamin</label>
+          <select class="form-select" name="jenis_kelamin">
+            <option value="">-</option>
+            {% for v, l in [('L', 'Laki-laki'), ('P', 'Perempuan')] %}<option value="{{ v }}" {% if pasien.jenis_kelamin == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-12"><label class="form-label">Catatan (diagnosis, alergi, dll.)</label><textarea class="form-control" name="catatan" rows="3">{{ pasien.catatan or '' }}</textarea></div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary">Simpan</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('pasien_detail', pasien_id=pasien.id) if edit else url_for('pasien_list') }}">Batal</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

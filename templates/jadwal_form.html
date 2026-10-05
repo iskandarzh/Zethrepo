@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Jadwal Obat{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 640px">
+  <div class="card-body">
+    <h4 class="mb-1">Buat Jadwal Pemberian Obat</h4>
+    <p class="text-muted mb-3">Pasien: <strong>{{ pasien.nama }}</strong> &middot; Obat: <strong>{{ o.nama }} {{ o.dosis }} {{ o.satuan or '' }}</strong> ({{ o.rute or '-' }}{% if o.frekuensi %}, {{ o.frekuensi }}{% endif %})</p>
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Dari Tanggal *</label><input type="date" class="form-control" name="tanggal_mulai" value="{{ j.tanggal_mulai or '' }}" required></div>
+        <div class="col-md-6"><label class="form-label">Sampai Tanggal *</label><input type="date" class="form-control" name="tanggal_selesai" value="{{ j.tanggal_selesai or '' }}" required></div>
+        <div class="col-12">
+          <label class="form-label">Jam Pemberian *</label>
+          <input class="form-control" name="jam" id="jam" value="{{ j.jam or '' }}" placeholder="08:00, 14:00, 20:00" required>
+          <div class="form-text">Pisahkan dengan koma. Cepat pilih:
+            <a href="#" data-jam="08:00">1x</a> &middot;
+            <a href="#" data-jam="08:00, 20:00">2x</a> &middot;
+            <a href="#" data-jam="06:00, 14:00, 22:00">3x</a> &middot;
+            <a href="#" data-jam="00:00, 06:00, 12:00, 18:00">4x</a>
+          </div>
+        </div>
+        <div class="col-12"><label class="form-label">Catatan</label><input class="form-control" name="catatan" value="{{ j.catatan or '' }}" placeholder="Sesudah makan"></div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary">Buat Jadwal</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('pasien_detail', pasien_id=pasien.id, tab='jadwal') }}">Lewati</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-jam]').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('jam').value = a.dataset.jam;
+}));
+</script>
+{% endblock %}

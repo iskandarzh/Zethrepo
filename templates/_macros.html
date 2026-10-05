@@ -1,0 +1,33 @@
+{% macro badge(kat) -%}
+  {%- if kat -%}<span class="badge text-bg-{{ kat[1] }}">{{ kat[0] }}</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro status_jadwal(j, sekarang) -%}
+  {%- if j.status == 'diberikan' -%}<span class="badge text-bg-success">Diberikan {{ j.waktu_diberikan|jam if j.waktu_diberikan }}</span>
+  {%- elif j.status == 'dilewati' -%}<span class="badge text-bg-secondary">Dilewati</span>
+  {%- elif j.waktu < sekarang -%}<span class="badge text-bg-danger">Terlambat</span>
+  {%- else -%}<span class="badge text-bg-warning">Terjadwal</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro aksi_jadwal(j, next_url) -%}
+  <div class="d-inline-flex gap-1">
+  {% if j.status != 'diberikan' %}
+    <form method="post" action="{{ url_for('jadwal_status', jid=j.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="status" value="diberikan"><input type="hidden" name="next" value="{{ next_url }}">
+      <button class="btn btn-sm btn-success" title="Tandai sudah diberikan"><i class="bi bi-check-lg"></i> Beri</button>
+    </form>
+  {% endif %}
+  {% if j.status == 'terjadwal' %}
+    <form method="post" action="{{ url_for('jadwal_status', jid=j.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="status" value="dilewati"><input type="hidden" name="next" value="{{ next_url }}">
+      <button class="btn btn-sm btn-outline-secondary" title="Lewati">Lewati</button>
+    </form>
+  {% else %}
+    <form method="post" action="{{ url_for('jadwal_status', jid=j.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="status" value="terjadwal"><input type="hidden" name="next" value="{{ next_url }}">
+      <button class="btn btn-sm btn-outline-secondary" title="Batalkan status"><i class="bi bi-arrow-counterclockwise"></i></button>
+    </form>
+  {% endif %}
+  </div>
+{%- endmacro %}
