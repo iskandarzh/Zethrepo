@@ -70,3 +70,19 @@ def test_validasi(client):
     assert "Isi sistolik dan diastolik sekaligus" in r.get_data(as_text=True)
     r = client.post("/pasien/baru", data={"nama": ""})
     assert "Nama pasien wajib diisi" in r.get_data(as_text=True)
+
+
+def test_edit_pasien_nama_kosong(client):
+    client.post("/pasien/baru", data={"nama": "Ani"})
+    r = client.post("/pasien/1/edit", data={"nama": "   "})
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "Nama pasien wajib diisi" in html and 'href="/pasien/1"' in html
+
+
+def test_obat_tanggal_terbalik_saat_tambah(client):
+    client.post("/pasien/baru", data={"nama": "Ani"})
+    r = client.post("/pasien/1/obat/baru", data={
+        "nama": "Metformin", "dosis": "500", "tanggal_mulai": "2026-10-10", "tanggal_selesai": "2026-10-05",
+    })
+    assert "Tanggal selesai tidak boleh sebelum tanggal mulai" in r.get_data(as_text=True)

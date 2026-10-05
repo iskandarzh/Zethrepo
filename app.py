@@ -274,7 +274,7 @@ def create_app(test_config=None):
                 d = _pasien_form_data()
             except ValueError as e:
                 flash(str(e), "danger")
-                return render_template("pasien_form.html", pasien=request.form, edit=True)
+                return render_template("pasien_form.html", pasien={**request.form.to_dict(), "id": pasien_id}, edit=True)
             db = get_db()
             db.execute(
                 "UPDATE pasien SET no_rm=?, nama=?, tanggal_lahir=?, jenis_kelamin=?, catatan=? WHERE id=?",
