@@ -19,11 +19,22 @@
     <a class="navbar-brand fw-semibold" href="{{ url_for('dashboard') }}"><i class="bi bi-heart-pulse"></i> Monitoring Pasien</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav">
-      <ul class="navbar-nav me-auto">
+      <ul class="navbar-nav me-auto">{% if g.user %}
         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('pasien') %}active{% endif %}" href="{{ url_for('pasien_list') }}">Pasien</a></li>
-      </ul>
-      <a class="btn btn-light btn-sm" href="{{ url_for('pasien_baru') }}"><i class="bi bi-person-plus"></i> Pasien Baru</a>
+      {% endif %}</ul>
+      {% if g.user %}
+      <a class="btn btn-light btn-sm me-2" href="{{ url_for('pasien_baru') }}"><i class="bi bi-person-plus"></i> Pasien Baru</a>
+      <div class="dropdown">
+        <button class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-person-circle"></i> {{ g.user.nama or g.user.username }}</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('pengguna') }}"><i class="bi bi-people"></i> Kelola Pengguna</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('ganti_password') }}"><i class="bi bi-key"></i> Ganti Password</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Keluar</button></form></li>
+        </ul>
+      </div>
+      {% endif %}
     </div>
   </div>
 </nav>

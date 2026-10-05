@@ -4,7 +4,7 @@
 <div class="card mx-auto" style="max-width: 640px">
   <div class="card-body">
     <h4 class="mb-3">{{ 'Edit' if edit else 'Tambah' }} Pasien</h4>
-    <form method="post">
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-4"><label class="form-label">No. Rekam Medis</label><input class="form-control" name="no_rm" value="{{ pasien.no_rm or '' }}"></div>
         <div class="col-md-8"><label class="form-label">Nama Lengkap *</label><input class="form-control" name="nama" value="{{ pasien.nama or '' }}" required></div>

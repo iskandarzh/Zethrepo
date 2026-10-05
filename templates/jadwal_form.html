@@ -5,7 +5,7 @@
   <div class="card-body">
     <h4 class="mb-1">Buat Jadwal Pemberian Obat</h4>
     <p class="text-muted mb-3">Pasien: <strong>{{ pasien.nama }}</strong> &middot; Obat: <strong>{{ o.nama }} {{ o.dosis }} {{ o.satuan or '' }}</strong> ({{ o.rute or '-' }}{% if o.frekuensi %}, {{ o.frekuensi }}{% endif %})</p>
-    <form method="post">
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-6"><label class="form-label">Dari Tanggal *</label><input type="date" class="form-control" name="tanggal_mulai" value="{{ j.tanggal_mulai or '' }}" required></div>
         <div class="col-md-6"><label class="form-label">Sampai Tanggal *</label><input type="date" class="form-control" name="tanggal_selesai" value="{{ j.tanggal_selesai or '' }}" required></div>

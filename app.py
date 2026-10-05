@@ -1,10 +1,22 @@
+import hmac
 import os
+import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
 
-from flask import Flask, abort, flash, g, redirect, render_template, request, url_for
+import click
+from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS pengguna (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    nama TEXT,
+    password_hash TEXT NOT NULL,
+    dibuat TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
 CREATE TABLE IF NOT EXISTS pasien (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     no_rm TEXT,
@@ -115,15 +127,44 @@ def now_local():
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
 
 
+MIN_PASSWORD = 8
+PUBLIC_ENDPOINTS = {"login", "setup", "static"}
+
+
+def load_secret_key(instance_path):
+    """SECRET_KEY dari env, atau dibuat acak sekali lalu disimpan di instance/secret_key."""
+    if os.environ.get("SECRET_KEY"):
+        return os.environ["SECRET_KEY"]
+    path = os.path.join(instance_path, "secret_key")
+    if not os.path.exists(path):
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(secrets.token_hex(32))
+    with open(path) as f:
+        return f.read().strip()
+
+
+def validasi_password(password, konfirmasi):
+    if len(password) < MIN_PASSWORD:
+        raise ValueError(f"Password minimal {MIN_PASSWORD} karakter")
+    if password != konfirmasi:
+        raise ValueError("Konfirmasi password tidak sama")
+
+
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
+    os.makedirs(app.instance_path, exist_ok=True)
     app.config.from_mapping(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev-ganti-di-produksi"),
+        SECRET_KEY=load_secret_key(app.instance_path),
         DATABASE=os.path.join(app.instance_path, "pasien.db"),
+        CSRF_ENABLED=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE") == "1",
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
     )
     if test_config:
         app.config.update(test_config)
-    os.makedirs(app.instance_path, exist_ok=True)
 
     def get_db():
         if "db" not in g:
@@ -141,7 +182,162 @@ def create_app(test_config=None):
     with app.app_context():
         get_db().executescript(SCHEMA)
 
+    # ---------- Autentikasi ----------
+    def csrf_token():
+        if "csrf_token" not in session:
+            session["csrf_token"] = secrets.token_urlsafe(32)
+        return session["csrf_token"]
+
+    def jumlah_pengguna():
+        return get_db().execute("SELECT COUNT(*) FROM pengguna").fetchone()[0]
+
+    @app.before_request
+    def cek_login():
+        if request.method == "POST" and app.config["CSRF_ENABLED"]:
+            token = request.form.get("csrf_token", "")
+            if not session.get("csrf_token") or not hmac.compare_digest(token, session["csrf_token"]):
+                abort(400, "Token CSRF tidak valid. Muat ulang halaman lalu coba lagi.")
+        g.user = None
+        uid = session.get("user_id")
+        if uid is not None:
+            g.user = get_db().execute("SELECT * FROM pengguna WHERE id = ?", (uid,)).fetchone()
+            if g.user is None:
+                session.clear()
+        if request.endpoint in PUBLIC_ENDPOINTS:
+            return None
+        if g.user is None:
+            if jumlah_pengguna() == 0:
+                return redirect(url_for("setup"))
+            return redirect(url_for("login", next=request.full_path if request.method == "GET" else None))
+        return None
+
+    def mulai_sesi(user_id):
+        session.clear()
+        session.permanent = True
+        session["user_id"] = user_id
+
+    @app.route("/setup", methods=["GET", "POST"])
+    def setup():
+        if jumlah_pengguna() > 0:
+            return redirect(url_for("login"))
+        if request.method == "POST":
+            try:
+                uid = buat_pengguna(request.form)
+            except ValueError as e:
+                flash(str(e), "danger")
+                return render_template("setup.html", form=request.form)
+            mulai_sesi(uid)
+            flash("Akun admin dibuat. Selamat datang!", "success")
+            return redirect(url_for("dashboard"))
+        return render_template("setup.html", form={})
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if jumlah_pengguna() == 0:
+            return redirect(url_for("setup"))
+        if g.user is not None:
+            return redirect(url_for("dashboard"))
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            user = get_db().execute("SELECT * FROM pengguna WHERE username = ?", (username,)).fetchone()
+            if user is None or not check_password_hash(user["password_hash"], password):
+                flash("Username atau password salah", "danger")
+                return render_template("login.html", username=username), 401
+            mulai_sesi(user["id"])
+            return redirect(safe_next(request.args.get("next"), url_for("dashboard")))
+        return render_template("login.html", username="")
+
+    @app.route("/logout", methods=["POST"])
+    def logout():
+        session.clear()
+        flash("Anda telah keluar", "success")
+        return redirect(url_for("login"))
+
+    def buat_pengguna(form):
+        username = form.get("username", "").strip()
+        nama = form.get("nama", "").strip()
+        password = form.get("password", "")
+        if not username:
+            raise ValueError("Username wajib diisi")
+        validasi_password(password, form.get("konfirmasi", ""))
+        db = get_db()
+        try:
+            cur = db.execute(
+                "INSERT INTO pengguna (username, nama, password_hash) VALUES (?, ?, ?)",
+                (username, nama, generate_password_hash(password)),
+            )
+        except sqlite3.IntegrityError:
+            raise ValueError(f"Username '{username}' sudah dipakai")
+        db.commit()
+        return cur.lastrowid
+
+    @app.route("/pengguna", methods=["GET", "POST"])
+    def pengguna():
+        db = get_db()
+        form = {}
+        if request.method == "POST":
+            try:
+                buat_pengguna(request.form)
+                flash("Pengguna ditambahkan", "success")
+                return redirect(url_for("pengguna"))
+            except ValueError as e:
+                flash(str(e), "danger")
+                form = request.form
+        users = db.execute("SELECT id, username, nama, dibuat FROM pengguna ORDER BY username").fetchall()
+        return render_template("pengguna.html", users=users, form=form)
+
+    @app.route("/pengguna/<int:uid>/hapus", methods=["POST"])
+    def pengguna_hapus(uid):
+        if uid == g.user["id"]:
+            flash("Tidak bisa menghapus akun sendiri", "danger")
+            return redirect(url_for("pengguna"))
+        db = get_db()
+        db.execute("DELETE FROM pengguna WHERE id = ?", (uid,))
+        db.commit()
+        flash("Pengguna dihapus", "success")
+        return redirect(url_for("pengguna"))
+
+    @app.route("/akun/password", methods=["GET", "POST"])
+    def ganti_password():
+        if request.method == "POST":
+            if not check_password_hash(g.user["password_hash"], request.form.get("password_lama", "")):
+                flash("Password lama salah", "danger")
+                return render_template("ganti_password.html")
+            try:
+                validasi_password(request.form.get("password", ""), request.form.get("konfirmasi", ""))
+            except ValueError as e:
+                flash(str(e), "danger")
+                return render_template("ganti_password.html")
+            db = get_db()
+            db.execute(
+                "UPDATE pengguna SET password_hash = ? WHERE id = ?",
+                (generate_password_hash(request.form["password"]), g.user["id"]),
+            )
+            db.commit()
+            flash("Password berhasil diganti", "success")
+            return redirect(url_for("dashboard"))
+        return render_template("ganti_password.html")
+
+    @app.cli.command("set-password")
+    @click.argument("username")
+    @click.password_option()
+    def set_password_command(username, password):
+        """Buat pengguna baru atau reset password pengguna yang ada."""
+        if len(password) < MIN_PASSWORD:
+            raise click.ClickException(f"Password minimal {MIN_PASSWORD} karakter")
+        db = get_db()
+        hashed = generate_password_hash(password)
+        if db.execute("SELECT 1 FROM pengguna WHERE username = ?", (username,)).fetchone():
+            db.execute("UPDATE pengguna SET password_hash = ? WHERE username = ?", (hashed, username))
+            click.echo(f"Password '{username}' diperbarui")
+        else:
+            db.execute("INSERT INTO pengguna (username, password_hash) VALUES (?, ?)", (username, hashed))
+            click.echo(f"Pengguna '{username}' dibuat")
+        db.commit()
+
     app.jinja_env.globals.update(
+        csrf_token=csrf_token,
         kategori_tensi=kategori_tensi,
         kategori_gula=kategori_gula,
         JENIS_GULA=JENIS_GULA,

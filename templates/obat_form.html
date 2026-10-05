@@ -5,7 +5,7 @@
   <div class="card-body">
     <h4 class="mb-1">{{ 'Edit' if edit else 'Tambah' }} Obat</h4>
     <p class="text-muted">Pasien: <strong>{{ pasien.nama }}</strong></p>
-    <form method="post">
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row g-3">
         <div class="col-md-6"><label class="form-label">Nama Obat *</label><input class="form-control" name="nama" value="{{ o.nama or '' }}" placeholder="Amlodipine" required></div>
         <div class="col-md-3"><label class="form-label">Dosis *</label><input class="form-control" name="dosis" value="{{ o.dosis or '' }}" placeholder="5" required></div>
