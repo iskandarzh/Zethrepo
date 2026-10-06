@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import val %}
+{% block title %}Buat Akun Admin{% endblock %}
+{% block content %}
+<div class="card mx-auto mt-5" style="max-width: 460px">
+  <div class="card-body p-4">
+    <h4 class="mb-1"><i class="bi bi-shield-lock"></i> Buat Akun Admin</h4>
+    <p class="text-muted small">Belum ada pengguna. Buat akun admin pertama untuk mulai memakai aplikasi.</p>
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3"><label class="form-label">Username</label><input class="form-control" name="username" value="{{ val(form, 'username') }}" required autofocus></div>
+      <div class="mb-3"><label class="form-label">Nama lengkap</label><input class="form-control" name="nama" value="{{ val(form, 'nama') }}"></div>
+      <div class="mb-3"><label class="form-label">Password</label><input type="password" class="form-control" name="password" minlength="8" required><div class="form-text">Minimal 8 karakter.</div></div>
+      <div class="mb-3"><label class="form-label">Ulangi password</label><input type="password" class="form-control" name="konfirmasi" minlength="8" required></div>
+      <button class="btn btn-primary w-100">Buat Akun</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

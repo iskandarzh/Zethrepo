@@ -38,3 +38,7 @@ python -m pytest -q
 ```
 
 > Kategori tensi (AHA/ACC 2017) dan gula darah (ADA/PERKENI) hanya sebagai acuan; keputusan klinis tetap oleh tenaga kesehatan.
+
+## Aplikasi lain di repo ini
+
+- [`datacenter/`](datacenter/README.md) – **Datacenter Activity Management** (work order, kunjungan, patroli suhu/kelembaban, insiden, aset rak, laporan). Berjalan terpisah di port 5001.

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Izin Kerja {{ a.nomor }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { font-size: 13px; padding: 2rem; }
+    th { width: 28%; background: #f8f9fa; }
+    .ttd { height: 80px; }
+    @media print { .no-print { display: none; } body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="no-print mb-3"><button class="btn btn-primary btn-sm" onclick="window.print()">Cetak</button></div>
+  <div class="d-flex justify-content-between align-items-end border-bottom pb-2 mb-3">
+    <div><h4 class="mb-0">FORMULIR IZIN KERJA DATA CENTER</h4><div>{{ config.NAMA_DC }}</div></div>
+    <div class="text-end"><div class="fs-5 fw-bold">{{ a.nomor }}</div><div>Status: {{ c.STATUS_AKTIVITAS[a.status][0] }}</div></div>
+  </div>
+  <table class="table table-bordered table-sm">
+    <tr><th>Judul pekerjaan</th><td>{{ a.judul }}</td></tr>
+    <tr><th>Jenis</th><td>{{ a.jenis }}</td></tr>
+    <tr><th>Lokasi</th><td>{{ a.kode_ruang or '-' }}{% if a.nama_ruang %} ({{ a.nama_ruang }}){% endif %}{% if a.kode_rak %} / Rak {{ a.kode_rak }}{% endif %}{% if a.nama_perangkat %} / {{ a.nama_perangkat }}{% endif %}</td></tr>
+    <tr><th>Jadwal</th><td>{{ a.mulai_rencana|tgl }} s/d {{ a.selesai_rencana|tgl }}</td></tr>
+    <tr><th>PIC</th><td>{{ a.pic }}</td></tr>
+    <tr><th>Vendor / pelaksana</th><td>{{ a.vendor or '-' }}</td></tr>
+    <tr><th>Tingkat risiko</th><td>{{ c.RISIKO[a.risiko][0] }}</td></tr>
+    <tr><th>Dampak layanan</th><td>{{ a.dampak_layanan or '-' }}</td></tr>
+    <tr><th>Deskripsi / langkah kerja</th><td style="white-space: pre-line">{{ a.deskripsi or '-' }}</td></tr>
+    <tr><th>Rencana rollback</th><td style="white-space: pre-line">{{ a.rencana_rollback or '-' }}</td></tr>
+  </table>
+  <h6>Personel</h6>
+  <table class="table table-bordered table-sm">
+    <thead><tr><th style="width:auto">Nama</th><th style="width:auto">Perusahaan</th><th style="width:auto">No. Identitas</th><th style="width:auto">Masuk</th><th style="width:auto">Keluar</th></tr></thead>
+    <tbody>
+      {% for k in tamu %}<tr><td>{{ k.nama }}</td><td>{{ k.perusahaan or '' }}</td><td>{{ k.no_identitas or '' }}</td><td>{{ k.masuk|tgl }}</td><td>{{ k.keluar|tgl if k.keluar else '' }}</td></tr>{% endfor %}
+      {% for _ in range([0, 4 - tamu|length]|max) %}<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+    </tbody>
+  </table>
+  <table class="table table-bordered table-sm text-center mt-4">
+    <tr><td>Diajukan oleh</td><td>Disetujui oleh</td><td>Pelaksana</td></tr>
+    <tr><td class="ttd"></td><td class="ttd"></td><td class="ttd"></td></tr>
+    <tr><td>{{ a.nama_pengaju or a.pengaju or '' }}</td><td>{{ (a.nama_penyetuju or a.penyetuju) if a.status != 'ditolak' and a.disetujui_oleh else '' }}</td><td>{{ a.vendor or a.pic }}</td></tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, hapus %}
+{% block title %}Patroli{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0"><i class="bi bi-thermometer-half"></i> Patroli &amp; Monitoring Lingkungan</h3>
+  {% if can_edit() %}<a class="btn btn-primary" href="{{ url_for('patroli.form') }}"><i class="bi bi-clipboard-check"></i> Catat Patroli</a>{% endif %}
+</div>
+<form class="card card-body mb-3"><div class="row g-2 align-items-end">
+  <div class="col-md-3"><label class="form-label small">Ruang</label><select class="form-select" name="ruang_id"><option value="">Semua</option>
+    {% for r in ruangs %}<option value="{{ r.id }}" {% if ruang_id == r.id %}selected{% endif %}>{{ r.kode }} – {{ r.nama }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><label class="form-label small">Dari</label><input type="date" class="form-control" name="dari" value="{{ dari }}"></div>
+  <div class="col-md-2"><label class="form-label small">Sampai</label><input type="date" class="form-control" name="sampai" value="{{ sampai }}"></div>
+  <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="temuan" value="1" id="tm" {% if hanya_temuan %}checked{% endif %}><label class="form-check-label" for="tm">Hanya yang ada temuan</label></div></div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary"><i class="bi bi-search"></i> Tampilkan</button></div>
+</div></form>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Waktu</th><th>Ruang</th><th>Suhu</th><th>RH</th>{% for k, label in c.FASILITAS %}<th class="small">{{ label.split(' ')[0] }}</th>{% endfor %}<th>Temuan</th><th>Petugas</th><th></th></tr></thead>
+    <tbody>
+    {% for p, t in rows %}
+      <tr class="{{ 'table-danger' if 'danger' in t|map(attribute=1) else ('table-warning' if t) }}">
+        <td class="text-nowrap small">{{ p.waktu|tgl }}</td>
+        <td>{{ p.kode_ruang }}</td>
+        <td>{{ p.suhu|angka }}°C</td>
+        <td>{{ p.kelembaban|angka }}%</td>
+        {% for k, label in c.FASILITAS %}<td>{{ badge(c.KONDISI, p[k]) }}</td>{% endfor %}
+        <td class="small">{% for pesan, warna in t %}<div class="text-{{ warna }}">{{ pesan }}</div>{% endfor %}{% if p.catatan %}<div class="text-muted">{{ p.catatan }}</div>{% endif %}</td>
+        <td class="small">{{ p.nama_petugas or p.petugas or '-' }}</td>
+        <td class="text-end text-nowrap">
+          {% if can_edit() %}
+            {% if t %}<a class="btn btn-sm btn-outline-danger" title="Buat insiden" href="{{ url_for('insiden.form', ruang_id=p.ruang_id, judul='Temuan patroli ' ~ p.kode_ruang, deskripsi=t|map(attribute=0)|join('; ')) }}"><i class="bi bi-exclamation-triangle"></i></a>{% endif %}
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('patroli.form', pid=p.id) }}"><i class="bi bi-pencil"></i></a>
+          {% endif %}
+          {% if is_admin() %}{{ hapus(url_for('patroli.hapus', pid=p.id), 'Hapus data patroli ini?', '') }}{% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="{{ 8 + c.FASILITAS|length }}" class="text-center text-muted py-4">Belum ada data patroli</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

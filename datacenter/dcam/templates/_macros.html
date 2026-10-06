@@ -1,0 +1,54 @@
+{% macro badge(mapping, key) -%}
+  {%- set v = mapping.get(key) -%}
+  {%- if v -%}<span class="badge text-bg-{{ v[1] }}">{{ v[0] }}</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro val(form, name) -%}
+  {%- set x = form[name] -%}{%- if x is defined and x is not none -%}{{ x }}{%- endif -%}
+{%- endmacro %}
+
+{% macro sel(form, name, value) -%}
+  {%- set x = form[name] -%}{%- if x is defined and x is not none and (x|string) == (value|string) %} selected{% endif -%}
+{%- endmacro %}
+
+{% macro field(form, name, label, type='text', required=False, col='col-md-6', extra='', help=None) -%}
+  <div class="{{ col }}">
+    <label class="form-label">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+    <input type="{{ type }}" class="form-control" name="{{ name }}" value="{{ val(form, name) }}" {% if required %}required{% endif %} {{ extra|safe }}>
+    {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro textarea(form, name, label, col='col-12', rows=3, required=False, placeholder='') -%}
+  <div class="{{ col }}">
+    <label class="form-label">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+    <textarea class="form-control" name="{{ name }}" rows="{{ rows }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %}>{{ val(form, name) }}</textarea>
+  </div>
+{%- endmacro %}
+
+{% macro select(form, name, label, options, col='col-md-6', required=False, empty=None) -%}
+  <div class="{{ col }}">
+    <label class="form-label">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+    <select class="form-select" name="{{ name }}" {% if required %}required{% endif %}>
+      {% if empty is not none %}<option value="">{{ empty }}</option>{% endif %}
+      {% if options is mapping %}
+        {% for k, v in options.items() %}<option value="{{ k }}"{{ sel(form, name, k) }}>{{ v[0] if v is not string else v }}</option>{% endfor %}
+      {% else %}
+        {% for o in options %}<option value="{{ o }}"{{ sel(form, name, o) }}>{{ o }}</option>{% endfor %}
+      {% endif %}
+    </select>
+  </div>
+{%- endmacro %}
+
+{% macro hapus(action, pesan, label='Hapus', small=True) -%}
+  <form method="post" action="{{ action }}" class="d-inline" data-confirm="{{ pesan }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn {{ 'btn-sm' if small }} btn-outline-danger"><i class="bi bi-trash"></i> {{ label }}</button>
+  </form>
+{%- endmacro %}
+
+{% macro csrf() -%}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{%- endmacro %}
+
+{% macro lokasi(row) -%}
+  {%- if row.kode_ruang -%}{{ row.kode_ruang }}{% if row.kode_rak %} / {{ row.kode_rak }}{% endif %}{%- else -%}<span class="text-muted">-</span>{%- endif -%}
+{%- endmacro %}

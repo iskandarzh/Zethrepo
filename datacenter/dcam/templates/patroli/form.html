@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, sel, csrf %}
+{% block title %}Patroli{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 760px"><div class="card-body p-4">
+  <h4 class="mb-3">{{ 'Ubah Data Patroli' if patroli else 'Catat Patroli / Pemeriksaan Ruang' }}</h4>
+  {% if not ruangs %}<div class="alert alert-info">Belum ada ruang. <a href="{{ url_for('aset.ruang_form') }}">Tambah ruang</a> terlebih dahulu.</div>{% endif %}
+  <form method="post">{{ csrf() }}
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Ruang <span class="text-danger">*</span></label>
+        <select class="form-select" name="ruang_id" required><option value="">- pilih -</option>
+          {% for r in ruangs %}<option value="{{ r.id }}"{{ sel(form, 'ruang_id', r.id) }}>{{ r.kode }} – {{ r.nama }} (suhu {{ r.suhu_min|angka }}–{{ r.suhu_max|angka }}°C, RH {{ r.rh_min|angka }}–{{ r.rh_max|angka }}%)</option>{% endfor %}</select></div>
+      {{ field(form, 'waktu', 'Waktu', 'datetime-local', True) }}
+      {{ field(form, 'suhu', 'Suhu (°C)', 'number', col='col-md-6', extra='step="0.1"') }}
+      {{ field(form, 'kelembaban', 'Kelembaban (% RH)', 'number', col='col-md-6', extra='step="0.1" min="0" max="100"') }}
+      <div class="col-12"><h6 class="text-muted border-bottom pb-1 mt-2">Kondisi Fasilitas</h6></div>
+      {% for k, label in c.FASILITAS %}
+      <div class="col-md-6 d-flex justify-content-between align-items-center">
+        <span>{{ label }}</span>
+        <div class="btn-group btn-group-sm" role="group">
+          {% for kk, v in c.KONDISI.items() %}
+          {% set checked = (form[k] if form[k] is defined and form[k] else 'normal') == kk %}
+          <input type="radio" class="btn-check" name="{{ k }}" id="{{ k }}_{{ kk }}" value="{{ kk }}" {% if checked %}checked{% endif %}>
+          <label class="btn btn-outline-{{ v[1] }}" for="{{ k }}_{{ kk }}">{{ v[0] }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      {{ textarea(form, 'catatan', 'Catatan', rows=2) }}
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
+      <a href="{{ url_for('patroli.daftar') }}" class="btn btn-link">Batal</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

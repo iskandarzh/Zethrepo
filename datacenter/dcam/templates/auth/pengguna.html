@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import val, sel, hapus %}
+{% block title %}Kelola Pengguna{% endblock %}
+{% block content %}
+<h3 class="mb-3"><i class="bi bi-people"></i> Kelola Pengguna</h3>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card"><div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Status</th><th>Dibuat</th><th></th></tr></thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.username }}{% if u.id == g.user.id %} <span class="badge text-bg-light">Anda</span>{% endif %}</td>
+            <td>{{ u.nama or '-' }}</td>
+            <td>{{ c.PERAN[u.peran] }}</td>
+            <td>{% if u.aktif %}<span class="badge text-bg-success">Aktif</span>{% else %}<span class="badge text-bg-secondary">Nonaktif</span>{% endif %}</td>
+            <td class="small text-muted">{{ u.dibuat|tgl }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('auth.pengguna_edit', uid=u.id) }}"><i class="bi bi-pencil"></i></a>
+              {% if u.id != g.user.id %}{{ hapus(url_for('auth.pengguna_hapus', uid=u.id), 'Hapus pengguna ' ~ u.username ~ '?', '') }}{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+    <div class="small text-muted mt-2">
+      <b>Admin</b>: semua akses, termasuk menyetujui aktivitas, menghapus data &amp; kelola pengguna.
+      <b>Operator</b>: mencatat aktivitas, kunjungan, patroli, insiden &amp; aset.
+      <b>Viewer</b>: hanya melihat.
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-body">
+      <h5 class="card-title">Tambah Pengguna</h5>
+      <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-2"><label class="form-label">Username</label><input class="form-control" name="username" value="{{ val(form, 'username') }}" required></div>
+        <div class="mb-2"><label class="form-label">Nama lengkap</label><input class="form-control" name="nama" value="{{ val(form, 'nama') }}"></div>
+        <div class="mb-2"><label class="form-label">Peran</label>
+          <select class="form-select" name="peran">{% for k, v in c.PERAN.items() %}<option value="{{ k }}"{{ sel(form, 'peran', k) if form else (' selected' if k == 'operator') }}>{{ v }}</option>{% endfor %}</select></div>
+        <div class="mb-2"><label class="form-label">Password</label><input type="password" class="form-control" name="password" minlength="8" required></div>
+        <div class="mb-3"><label class="form-label">Ulangi password</label><input type="password" class="form-control" name="konfirmasi" minlength="8" required></div>
+        <button class="btn btn-primary w-100"><i class="bi bi-person-plus"></i> Tambah</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

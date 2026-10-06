@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, select, sel, csrf %}
+{% block title %}Perangkat{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 860px"><div class="card-body p-4">
+  <h4 class="mb-3">{{ 'Ubah Perangkat ' ~ perangkat.nama if perangkat else 'Tambah Perangkat' }}</h4>
+  <form method="post">{{ csrf() }}
+    <div class="row g-3">
+      {{ field(form, 'nama', 'Nama / hostname', required=True, extra='autofocus') }}
+      <div class="col-md-6"><label class="form-label">Jenis</label>
+        <input class="form-control" name="jenis" list="jenis-list" value="{{ form['jenis'] if form['jenis'] is defined and form['jenis'] else '' }}">
+        <datalist id="jenis-list">{% for j in c.JENIS_PERANGKAT %}<option value="{{ j }}">{% endfor %}</datalist></div>
+      {{ field(form, 'merek', 'Merek', col='col-md-4') }}
+      {{ field(form, 'model', 'Model', col='col-md-4') }}
+      {{ field(form, 'serial', 'Serial number', col='col-md-4') }}
+      <div class="col-md-6"><label class="form-label">Rak</label>
+        <select class="form-select" name="rak_id"><option value="">- belum dipasang -</option>
+          {% for k in raks %}<option value="{{ k.id }}"{{ sel(form, 'rak_id', k.id) }}>{{ k.kode_ruang }} / {{ k.kode }} ({{ k.kapasitas_u }}U)</option>{% endfor %}</select></div>
+      {{ field(form, 'posisi_u', 'Posisi U (paling bawah)', 'number', col='col-md-3', extra='min="1"') }}
+      {{ field(form, 'tinggi_u', 'Tinggi (U)', 'number', col='col-md-3', extra='min="1"') }}
+      {{ field(form, 'ip_mgmt', 'IP management', col='col-md-4') }}
+      {{ field(form, 'pemilik', 'Pemilik / unit', col='col-md-4') }}
+      {{ select(form, 'status', 'Status', c.STATUS_PERANGKAT, col='col-md-4') }}
+      {{ textarea(form, 'keterangan', 'Keterangan', rows=2) }}
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
+      <a href="{{ url_for('aset.perangkat_detail', pid=perangkat.id) if perangkat else url_for('aset.perangkat_list') }}" class="btn btn-link">Batal</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

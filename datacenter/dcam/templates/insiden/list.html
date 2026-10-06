@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}Insiden{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Insiden</h3>
+  {% if can_edit() %}<a class="btn btn-danger" href="{{ url_for('insiden.form') }}"><i class="bi bi-plus-lg"></i> Lapor Insiden</a>{% endif %}
+</div>
+<form class="card card-body mb-3"><div class="row g-2 align-items-end">
+  <div class="col-md-5"><label class="form-label small">Cari</label><input class="form-control" name="q" value="{{ q }}" placeholder="No., judul, deskripsi"></div>
+  <div class="col-md-3"><label class="form-label small">Status</label><select class="form-select" name="status"><option value="">Semua</option>
+    <option value="aktif" {% if status == 'aktif' %}selected{% endif %}>Belum selesai</option>
+    {% for k, v in c.STATUS_INSIDEN.items() %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ v[0] }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><label class="form-label small">Severity</label><select class="form-select" name="severity"><option value="">Semua</option>
+    {% for k, v in c.SEVERITY.items() %}<option value="{{ k }}" {% if severity == k %}selected{% endif %}>{{ v[0] }}</option>{% endfor %}</select></div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary"><i class="bi bi-search"></i> Tampilkan</button></div>
+</div></form>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>No.</th><th>Judul</th><th>Kategori</th><th>Severity</th><th>Lokasi</th><th>Kejadian</th><th>Durasi</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for i in rows %}
+      <tr>
+        <td class="text-nowrap"><a href="{{ url_for('insiden.detail', iid=i.id) }}">{{ i.nomor }}</a></td>
+        <td>{{ i.judul }}{% if i.nama_perangkat %}<div class="small text-muted">{{ i.nama_perangkat }}</div>{% endif %}</td>
+        <td>{{ i.kategori }}</td>
+        <td>{{ badge(c.SEVERITY, i.severity) }}</td>
+        <td>{{ i.kode_ruang or '-' }}</td>
+        <td class="small text-nowrap">{{ i.waktu_kejadian|tgl }}</td>
+        <td class="small">{{ i.waktu_kejadian|durasi(i.waktu_selesai) }}</td>
+        <td>{{ badge(c.STATUS_INSIDEN, i.status) }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Tidak ada insiden</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

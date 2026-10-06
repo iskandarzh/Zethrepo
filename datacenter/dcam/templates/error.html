@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Error {{ kode }}{% endblock %}
+{% block content %}
+<div class="card mx-auto mt-4 text-center" style="max-width: 480px">
+  <div class="card-body p-5">
+    <div class="display-4 text-muted">{{ kode }}</div>
+    <p class="lead mt-2">{{ pesan }}</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Kembali ke Dashboard</a>
+  </div>
+</div>
+{% endblock %}

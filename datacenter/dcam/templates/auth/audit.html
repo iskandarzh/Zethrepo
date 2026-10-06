@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Log Audit{% endblock %}
+{% block content %}
+<h3 class="mb-3"><i class="bi bi-journal-text"></i> Log Audit <small class="text-muted fs-6">500 entri terakhir</small></h3>
+<div class="card"><div class="table-responsive">
+  <table class="table table-sm table-hover mb-0">
+    <thead class="table-light"><tr><th>Waktu</th><th>Pengguna</th><th>Aksi</th><th>Objek</th><th>Detail</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td class="text-nowrap">{{ r.waktu|tgl }}</td><td>{{ r.username or '-' }}</td><td>{{ r.aksi }}</td><td>{{ r.objek }}</td><td>{{ r.detail }}</td></tr>
+    {% else %}
+      <tr><td colspan="5" class="text-center text-muted py-4">Belum ada aktivitas tercatat</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

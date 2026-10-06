@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, hapus %}
+{% block title %}Rak {{ rak.kode }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="text-muted small"><a href="{{ url_for('aset.ruang_list') }}">Ruang</a> / <a href="{{ url_for('aset.ruang_detail', rid=rak.ruang_id) }}">{{ rak.kode_ruang }}</a> / Rak {{ rak.kode }}</div>
+    <h3 class="mb-0">Rak {{ rak.kode }} <small class="text-muted">{{ rak.nama_ruang }}</small></h3>
+    <div class="small text-muted">{{ terpakai }}/{{ rak.kapasitas_u }}U terpakai · {{ rak.kapasitas_u - terpakai }}U kosong{% if rak.keterangan %} · {{ rak.keterangan }}{% endif %}</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can_edit() %}
+    <a class="btn btn-primary" href="{{ url_for('aset.perangkat_form', rak_id=rak.id) }}"><i class="bi bi-plus-lg"></i> Pasang Perangkat</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('aktivitas.baru', rak_id=rak.id) }}"><i class="bi bi-tools"></i> Ajukan Aktivitas</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('aset.rak_form', kid=rak.id) }}"><i class="bi bi-pencil"></i> Ubah</a>
+    {% endif %}
+    {% if is_admin() %}{{ hapus(url_for('aset.rak_hapus', kid=rak.id), 'Hapus rak ' ~ rak.kode ~ '? Perangkat di dalamnya akan menjadi tanpa rak.', small=False) }}{% endif %}
+  </div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card"><div class="card-body">
+      <h6 class="card-title">Elevasi Rak</h6>
+      <table class="rack">
+        {% for u, item in baris %}
+        <tr>
+          <td class="u">U{{ u }}</td>
+          {% if item == 'lanjut' %}
+          {% elif item %}
+            <td class="dev {{ item.status }}" rowspan="{{ item.tinggi_u }}"><a href="{{ url_for('aset.perangkat_detail', pid=item.id) }}" class="text-reset text-decoration-none">{{ item.nama }}</a> <span class="text-muted small">{{ item.jenis or '' }}{% if item.tinggi_u > 1 %} · {{ item.tinggi_u }}U{% endif %}</span></td>
+          {% else %}
+            <td class="kosong">{% if can_edit() %}<a class="small" href="{{ url_for('aset.perangkat_form', rak_id=rak.id, posisi_u=u) }}">+ pasang di U{{ u }}</a>{% endif %}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </table>
+    </div></div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card"><div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Posisi</th><th>Perangkat</th><th>Merek / Model</th><th>Serial</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for p in perangkat %}
+          <tr><td class="text-nowrap">{% if p.posisi_u %}U{{ p.posisi_u }}{% if p.tinggi_u > 1 %}–{{ p.posisi_u + p.tinggi_u - 1 }}{% endif %}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+            <td><a href="{{ url_for('aset.perangkat_detail', pid=p.id) }}">{{ p.nama }}</a><div class="small text-muted">{{ p.jenis or '' }}</div></td>
+            <td>{{ p.merek or '' }} {{ p.model or '' }}</td><td class="small">{{ p.serial or '-' }}</td><td>{{ badge(c.STATUS_PERANGKAT, p.status) }}</td></tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-3">Rak masih kosong</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

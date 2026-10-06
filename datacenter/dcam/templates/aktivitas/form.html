@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, select, sel, csrf %}
+{% block title %}{{ 'Ubah' if aktivitas else 'Ajukan' }} Aktivitas{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 960px"><div class="card-body p-4">
+  <h4 class="mb-3">{% if aktivitas %}Ubah Aktivitas {{ aktivitas.nomor }}{% else %}Ajukan Aktivitas Baru{% endif %}</h4>
+  <form method="post">{{ csrf() }}
+    <div class="row g-3">
+      {{ field(form, 'judul', 'Judul pekerjaan', required=True, col='col-md-8', extra='autofocus placeholder="mis. Instalasi server baru aplikasi ERP"') }}
+      {{ select(form, 'jenis', 'Jenis aktivitas', c.JENIS_AKTIVITAS, col='col-md-4', required=True) }}
+      {{ textarea(form, 'deskripsi', 'Deskripsi / langkah kerja', rows=4) }}
+
+      <div class="col-12"><h6 class="text-muted border-bottom pb-1 mt-2">Lokasi</h6></div>
+      <div class="col-md-4"><label class="form-label">Ruang</label>
+        <select class="form-select" name="ruang_id"><option value="">-</option>
+          {% for r in ruangs %}<option value="{{ r.id }}"{{ sel(form, 'ruang_id', r.id) }}>{{ r.kode }} – {{ r.nama }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label">Rak</label>
+        <select class="form-select" name="rak_id"><option value="">-</option>
+          {% for k in raks %}<option value="{{ k.id }}"{{ sel(form, 'rak_id', k.id) }}>{{ k.kode_ruang }} / {{ k.kode }}</option>{% endfor %}</select>
+        <div class="form-text">Ruang otomatis mengikuti rak.</div></div>
+      <div class="col-md-4"><label class="form-label">Perangkat</label>
+        <select class="form-select" name="perangkat_id"><option value="">-</option>
+          {% for p in perangkats %}<option value="{{ p.id }}"{{ sel(form, 'perangkat_id', p.id) }}>{{ p.nama }}{% if p.kode_rak %} ({{ p.kode_ruang }}/{{ p.kode_rak }}){% endif %}</option>{% endfor %}</select></div>
+
+      <div class="col-12"><h6 class="text-muted border-bottom pb-1 mt-2">Jadwal &amp; Pelaksana</h6></div>
+      {{ field(form, 'mulai_rencana', 'Rencana mulai', 'datetime-local', True, 'col-md-3') }}
+      {{ field(form, 'selesai_rencana', 'Rencana selesai', 'datetime-local', True, 'col-md-3') }}
+      {{ field(form, 'pic', 'PIC (penanggung jawab)', required=True, col='col-md-3') }}
+      {{ field(form, 'vendor', 'Vendor / pelaksana', col='col-md-3') }}
+
+      <div class="col-12"><h6 class="text-muted border-bottom pb-1 mt-2">Risiko &amp; Dampak</h6></div>
+      {{ select(form, 'risiko', 'Tingkat risiko', c.RISIKO, col='col-md-3') }}
+      {{ field(form, 'dampak_layanan', 'Dampak ke layanan', col='col-md-9', extra='placeholder="mis. Downtime aplikasi X ±15 menit / tidak ada"') }}
+      {{ textarea(form, 'rencana_rollback', 'Rencana rollback', rows=2, placeholder='Wajib untuk risiko tinggi') }}
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-primary"><i class="bi bi-save"></i> {{ 'Simpan' if aktivitas else 'Ajukan' }}</button>
+      <a href="{{ url_for('aktivitas.detail', aid=aktivitas.id) if aktivitas else url_for('aktivitas.daftar') }}" class="btn btn-link">Batal</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

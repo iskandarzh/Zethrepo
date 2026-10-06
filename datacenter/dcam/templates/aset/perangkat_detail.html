@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, hapus %}
+{% block title %}{{ p.nama }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="text-muted small"><a href="{{ url_for('aset.perangkat_list') }}">Perangkat</a> / {{ p.nama }}</div>
+    <h3 class="mb-1">{{ p.nama }}</h3>
+    <div>{{ badge(c.STATUS_PERANGKAT, p.status) }} <span class="badge text-bg-light">{{ p.jenis or '-' }}</span></div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can_edit() %}
+    <a class="btn btn-outline-primary" href="{{ url_for('aktivitas.baru', perangkat_id=p.id) }}"><i class="bi bi-tools"></i> Ajukan Aktivitas</a>
+    <a class="btn btn-outline-danger" href="{{ url_for('insiden.form', perangkat_id=p.id, ruang_id=p.ruang_id) }}"><i class="bi bi-exclamation-triangle"></i> Lapor Insiden</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('aset.perangkat_form', pid=p.id) }}"><i class="bi bi-pencil"></i> Ubah</a>
+    {% endif %}
+    {% if is_admin() %}{{ hapus(url_for('aset.perangkat_hapus', pid=p.id), 'Hapus perangkat ' ~ p.nama ~ '?', small=False) }}{% endif %}
+  </div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card"><div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-5">Merek / model</dt><dd class="col-7">{{ p.merek or '' }} {{ p.model or '' }}</dd>
+        <dt class="col-5">Serial</dt><dd class="col-7">{{ p.serial or '-' }}</dd>
+        <dt class="col-5">Lokasi</dt><dd class="col-7">{% if p.rak_id %}<a href="{{ url_for('aset.rak_detail', kid=p.rak_id) }}">{{ p.kode_ruang }} / {{ p.kode_rak }}</a>{% if p.posisi_u %} U{{ p.posisi_u }}{% if p.tinggi_u > 1 %}–{{ p.posisi_u + p.tinggi_u - 1 }}{% endif %}{% endif %}{% else %}-{% endif %}</dd>
+        <dt class="col-5">Tinggi</dt><dd class="col-7">{{ p.tinggi_u }}U</dd>
+        <dt class="col-5">IP management</dt><dd class="col-7">{{ p.ip_mgmt or '-' }}</dd>
+        <dt class="col-5">Pemilik / unit</dt><dd class="col-7">{{ p.pemilik or '-' }}</dd>
+        <dt class="col-5">Keterangan</dt><dd class="col-7" style="white-space: pre-line">{{ p.keterangan or '-' }}</dd>
+      </dl>
+    </div></div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold">Riwayat Aktivitas</div>
+      <ul class="list-group list-group-flush">
+        {% for a in aktivitas %}
+        <li class="list-group-item d-flex justify-content-between"><span><span class="small text-muted">{{ a.mulai_rencana|tgl }}</span> <a href="{{ url_for('aktivitas.detail', aid=a.id) }}">{{ a.nomor }}</a> {{ a.judul }}</span>{{ badge(c.STATUS_AKTIVITAS, a.status) }}</li>
+        {% else %}<li class="list-group-item text-muted text-center">Belum ada</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header bg-white fw-semibold">Riwayat Insiden</div>
+      <ul class="list-group list-group-flush">
+        {% for i in insiden %}
+        <li class="list-group-item d-flex justify-content-between"><span><span class="small text-muted">{{ i.waktu_kejadian|tgl }}</span> <a href="{{ url_for('insiden.detail', iid=i.id) }}">{{ i.nomor }}</a> {{ i.judul }}</span><span>{{ badge(c.SEVERITY, i.severity) }} {{ badge(c.STATUS_INSIDEN, i.status) }}</span></li>
+        {% else %}<li class="list-group-item text-muted text-center">Belum ada</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
