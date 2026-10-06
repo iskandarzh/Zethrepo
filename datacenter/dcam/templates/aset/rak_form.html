@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, sel, csrf %}
+{% block title %}Rak{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 640px"><div class="card-body p-4">
+  <h4 class="mb-3">{{ 'Ubah Rak ' ~ rak.kode if rak else 'Tambah Rak' }}</h4>
+  <form method="post">{{ csrf() }}
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Ruang <span class="text-danger">*</span></label>
+        <select class="form-select" name="ruang_id" required><option value="">- pilih -</option>
+          {% for r in ruangs %}<option value="{{ r.id }}"{{ sel(form, 'ruang_id', r.id) }}>{{ r.kode }} – {{ r.nama }}</option>{% endfor %}</select></div>
+      {{ field(form, 'kode', 'Kode rak', required=True, col='col-md-3', extra='placeholder="A01"') }}
+      {{ field(form, 'kapasitas_u', 'Kapasitas (U)', 'number', True, 'col-md-3', extra='min="1"') }}
+      {{ textarea(form, 'keterangan', 'Keterangan', rows=2) }}
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
+      <a href="{{ url_for('aset.rak_detail', kid=rak.id) if rak else url_for('aset.ruang_list') }}" class="btn btn-link">Batal</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

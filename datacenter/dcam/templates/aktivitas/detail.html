@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, lokasi, csrf, hapus %}
+{% block title %}{{ a.nomor }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="text-muted small"><a href="{{ url_for('aktivitas.daftar') }}">Aktivitas</a> / {{ a.nomor }}</div>
+    <h3 class="mb-1">{{ a.judul }}</h3>
+    <div>{{ badge(c.STATUS_AKTIVITAS, a.status) }} {{ badge(c.RISIKO, a.risiko) }} <span class="badge text-bg-light">{{ a.jenis }}</span></div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('aktivitas.cetak', aid=a.id) }}" target="_blank"><i class="bi bi-printer"></i> Cetak Izin Kerja</a>
+    {% if can_edit() and boleh_edit %}<a class="btn btn-outline-primary" href="{{ url_for('aktivitas.edit', aid=a.id) }}"><i class="bi bi-pencil"></i> Ubah</a>{% endif %}
+    {% if is_admin() %}{{ hapus(url_for('aktivitas.hapus', aid=a.id), 'Hapus aktivitas ' ~ a.nomor ~ '?', small=False) }}{% endif %}
+  </div>
+</div>
+
+{% if bentrok %}
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Jadwal bentrok dengan aktivitas lain di lokasi yang sama:
+  {% for b in bentrok %}<a href="{{ url_for('aktivitas.detail', aid=b.id) }}">{{ b.nomor }}</a> ({{ b.judul }}, {{ b.mulai_rencana|tgl }}–{{ b.selesai_rencana|jam }}){{ ', ' if not loop.last }}{% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card mb-4"><div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Lokasi</dt><dd class="col-sm-8">{{ lokasi(a) }}{% if a.nama_ruang %} <span class="text-muted">({{ a.nama_ruang }})</span>{% endif %}</dd>
+        <dt class="col-sm-4">Perangkat</dt><dd class="col-sm-8">{% if a.perangkat_id %}<a href="{{ url_for('aset.perangkat_detail', pid=a.perangkat_id) }}">{{ a.nama_perangkat }}</a>{% else %}-{% endif %}</dd>
+        <dt class="col-sm-4">Rencana</dt><dd class="col-sm-8">{{ a.mulai_rencana|tgl }} s/d {{ a.selesai_rencana|tgl }} <span class="text-muted">({{ a.mulai_rencana|durasi(a.selesai_rencana) }})</span></dd>
+        <dt class="col-sm-4">Aktual</dt><dd class="col-sm-8">{% if a.mulai_aktual %}{{ a.mulai_aktual|tgl }} s/d {{ a.selesai_aktual|tgl if a.selesai_aktual else '…' }} <span class="text-muted">({{ a.mulai_aktual|durasi(a.selesai_aktual) }})</span>
+          {% if a.selesai_aktual and a.selesai_aktual > a.selesai_rencana %}<span class="badge text-bg-warning">Melewati jadwal</span>{% endif %}{% else %}-{% endif %}</dd>
+        <dt class="col-sm-4">PIC</dt><dd class="col-sm-8">{{ a.pic }}</dd>
+        <dt class="col-sm-4">Vendor / pelaksana</dt><dd class="col-sm-8">{{ a.vendor or '-' }}</dd>
+        <dt class="col-sm-4">Dampak layanan</dt><dd class="col-sm-8">{{ a.dampak_layanan or '-' }}</dd>
+        <dt class="col-sm-4">Rencana rollback</dt><dd class="col-sm-8" style="white-space: pre-line">{{ a.rencana_rollback or '-' }}</dd>
+        <dt class="col-sm-4">Diajukan oleh</dt><dd class="col-sm-8">{{ a.nama_pengaju or a.pengaju or '-' }} <span class="text-muted small">{{ a.dibuat|tgl }}</span></dd>
+        <dt class="col-sm-4">{{ 'Ditolak' if a.status == 'ditolak' else 'Disetujui' }} oleh</dt><dd class="col-sm-8">{% if a.disetujui_oleh %}{{ a.nama_penyetuju or a.penyetuju }} <span class="text-muted small">{{ a.waktu_persetujuan|tgl }}</span>{% else %}-{% endif %}</dd>
+      </dl>
+      {% if a.deskripsi %}<hr><h6>Deskripsi / langkah kerja</h6><div style="white-space: pre-line">{{ a.deskripsi }}</div>{% endif %}
+    </div></div>
+
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-person-badge"></i> Personel / Tamu Terkait ({{ tamu|length }})</span>
+        {% if can_edit() %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('kunjungan.baru', aktivitas_id=a.id) }}"><i class="bi bi-box-arrow-in-right"></i> Check-in</a>{% endif %}
+      </div>
+      <div class="table-responsive"><table class="table table-sm mb-0">
+        <thead class="table-light"><tr><th>Nama</th><th>Perusahaan</th><th>Masuk</th><th>Keluar</th></tr></thead>
+        <tbody>
+        {% for k in tamu %}
+          <tr><td>{{ k.nama }}</td><td>{{ k.perusahaan or '-' }}</td><td>{{ k.masuk|tgl }}</td>
+            <td>{% if k.keluar %}{{ k.keluar|tgl }}{% else %}<span class="badge text-bg-info">Di dalam</span>{% endif %}</td></tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Belum ada</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if can_edit() and transisi %}
+    <div class="card mb-4"><div class="card-body">
+      <h6 class="card-title">Proses</h6>
+      <form method="post" action="{{ url_for('aktivitas.ubah_status', aid=a.id) }}">{{ csrf() }}
+        <textarea class="form-control mb-2" name="catatan" rows="2" placeholder="Catatan (wajib untuk menolak / membatalkan)"></textarea>
+        <div class="d-flex flex-wrap gap-2">
+          {% for tujuan, label, _admin, kelas, ikon in transisi %}
+          <button class="btn btn-{{ kelas }}" name="status" value="{{ tujuan }}"><i class="bi bi-{{ ikon }}"></i> {{ label }}</button>
+          {% endfor %}
+        </div>
+      </form>
+      {% if a.status == 'diajukan' and not is_admin() %}<div class="small text-muted mt-2">Persetujuan dilakukan oleh admin.</div>{% endif %}
+    </div></div>
+    {% endif %}
+
+    <div class="card" id="timeline"><div class="card-body">
+      <h6 class="card-title"><i class="bi bi-clock-history"></i> Timeline</h6>
+      {% if can_edit() %}
+      <form method="post" action="{{ url_for('aktivitas.tambah_catatan', aid=a.id) }}" class="mb-3">{{ csrf() }}
+        <div class="input-group"><input class="form-control" name="isi" placeholder="Tambah catatan progres…" required><button class="btn btn-outline-primary"><i class="bi bi-send"></i></button></div>
+      </form>
+      {% endif %}
+      <div class="timeline">
+        {% for l in logs %}
+        <div class="item {{ l.jenis }}">
+          <div class="small text-muted">{{ l.waktu|tgl }} · {{ l.nama or l.username or '-' }}</div>
+          <div style="white-space: pre-line">{{ l.isi }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

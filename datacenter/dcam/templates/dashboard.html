@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, lokasi, csrf %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h3 class="mb-0">Dashboard <small class="text-muted fs-6">{{ today()|tgl }}</small></h3>
+  {% if can_edit() %}
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{{ url_for('aktivitas.baru') }}"><i class="bi bi-plus-lg"></i> Aktivitas</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('kunjungan.baru') }}"><i class="bi bi-box-arrow-in-right"></i> Check-in Tamu</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('patroli.form') }}"><i class="bi bi-clipboard-check"></i> Patroli</a>
+    <a class="btn btn-outline-danger" href="{{ url_for('insiden.form') }}"><i class="bi bi-exclamation-triangle"></i> Lapor Insiden</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  {% for label, num, sub, icon, color, link in [
+      ('Aktivitas hari ini', stats.aktivitas_hari_ini, stats.berlangsung ~ ' sedang berlangsung', 'tools', 'primary', url_for('aktivitas.daftar', dari=today(), sampai=today())),
+      ('Menunggu persetujuan', stats.menunggu, 'pengajuan aktivitas', 'hourglass-split', 'warning', url_for('aktivitas.daftar', status='diajukan')),
+      ('Tamu di dalam DC', stats.tamu, 'belum check-out', 'person-badge', 'info', url_for('kunjungan.daftar', di_dalam=1)),
+      ('Insiden terbuka', stats.insiden, stats.insiden_kritis ~ ' kritis/tinggi', 'exclamation-octagon', 'danger', url_for('insiden.daftar', status='aktif')),
+  ] %}
+  <div class="col-6 col-xl-3">
+    <a href="{{ link }}" class="text-decoration-none text-reset">
+    <div class="card stat h-100 border-start border-4 border-{{ color }}"><div class="card-body d-flex justify-content-between">
+      <div><div class="text-muted small">{{ label }}</div><div class="num text-{{ color }}">{{ num }}</div><div class="small text-muted">{{ sub }}</div></div>
+      <i class="bi bi-{{ icon }} icon text-{{ color }}"></i>
+    </div></div></a>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-day"></i> Aktivitas Hari Ini</div>
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>No.</th><th>Aktivitas</th><th>Lokasi</th><th>Waktu</th><th>PIC / Vendor</th><th>Risiko</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for a in aktivitas_hari_ini %}
+          <tr>
+            <td class="text-nowrap"><a href="{{ url_for('aktivitas.detail', aid=a.id) }}">{{ a.nomor }}</a></td>
+            <td>{{ a.judul }}<div class="small text-muted">{{ a.jenis }}</div></td>
+            <td>{{ lokasi(a) }}</td>
+            <td class="text-nowrap small">{{ a.mulai_rencana|tgl }}<br>s/d {{ a.selesai_rencana|tgl }}</td>
+            <td>{{ a.pic }}<div class="small text-muted">{{ a.vendor or '' }}</div></td>
+            <td>{{ badge(c.RISIKO, a.risiko) }}</td>
+            <td>{{ badge(c.STATUS_AKTIVITAS, a.status) }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">Tidak ada aktivitas terjadwal hari ini</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+
+    {% if menunggu %}
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-hourglass-split text-warning"></i> Menunggu Persetujuan</div>
+      <ul class="list-group list-group-flush">
+        {% for a in menunggu %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div><a href="{{ url_for('aktivitas.detail', aid=a.id) }}">{{ a.nomor }}</a> – {{ a.judul }}
+            <div class="small text-muted">{{ a.mulai_rencana|tgl }} · {{ a.kode_ruang or '-' }} · {{ a.pic }}</div></div>
+          {{ badge(c.RISIKO, a.risiko) }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-week"></i> 7 Hari ke Depan</div>
+      <ul class="list-group list-group-flush">
+        {% for a in akan_datang %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div><span class="text-muted small me-2">{{ a.mulai_rencana|tgl }}</span><a href="{{ url_for('aktivitas.detail', aid=a.id) }}">{{ a.nomor }}</a> – {{ a.judul }} <span class="small text-muted">({{ a.kode_ruang or '-' }})</span></div>
+          {{ badge(c.STATUS_AKTIVITAS, a.status) }}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted text-center py-3">Tidak ada aktivitas terjadwal</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between"><span><i class="bi bi-thermometer-half"></i> Kondisi Ruang (patroli terakhir)</span>
+        <a href="{{ url_for('aset.ruang_list') }}" class="small">Ruang</a></div>
+      <ul class="list-group list-group-flush">
+        {% for r, t in kondisi %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('aset.ruang_detail', rid=r.rid) }}" class="fw-semibold">{{ r.kode_ruang }} <span class="fw-normal text-muted small">{{ r.nama_ruang }}</span></a>
+            {% if not r.waktu %}<span class="badge text-bg-light">Belum ada data</span>
+            {% elif t %}<span class="badge text-bg-{{ 'danger' if 'danger' in t|map(attribute=1) else 'warning' }}">{{ t|length }} temuan</span>
+            {% else %}<span class="badge text-bg-success">Normal</span>{% endif %}
+          </div>
+          {% if r.waktu %}
+          <div class="small text-muted"><i class="bi bi-thermometer"></i> {{ r.suhu|angka }}°C · <i class="bi bi-droplet"></i> {{ r.kelembaban|angka }}% · {{ r.waktu|tgl }}</div>
+          {% for pesan, warna in t %}<div class="small text-{{ warna }}"><i class="bi bi-exclamation-circle"></i> {{ pesan }}</div>{% endfor %}
+          {% endif %}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted text-center py-3">Belum ada ruang. <a href="{{ url_for('aset.ruang_form') }}">Tambah ruang</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-person-badge"></i> Tamu di Dalam DC</div>
+      <ul class="list-group list-group-flush">
+        {% for k in tamu %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>{{ k.nama }} <span class="small text-muted">{{ k.perusahaan or '' }}</span>
+            <div class="small text-muted">{{ k.kode_ruang or '-' }} · masuk {{ k.masuk|jam }} ({{ k.masuk|durasi }})</div></div>
+          {% if can_edit() %}
+          <form method="post" action="{{ url_for('kunjungan.checkout', kid=k.id) }}">{{ csrf() }}<input type="hidden" name="next" value="{{ url_for('dashboard.index') }}">
+            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-right"></i> Keluar</button></form>
+          {% endif %}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted text-center py-3">Tidak ada tamu di dalam</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-exclamation-triangle"></i> Insiden Terbuka</div>
+      <ul class="list-group list-group-flush">
+        {% for i in insiden %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between"><a href="{{ url_for('insiden.detail', iid=i.id) }}">{{ i.nomor }}</a> {{ badge(c.SEVERITY, i.severity) }}</div>
+          <div>{{ i.judul }}</div>
+          <div class="small text-muted">{{ i.kategori }} · {{ i.kode_ruang or '-' }} · {{ badge(c.STATUS_INSIDEN, i.status) }} · {{ i.waktu_kejadian|durasi }}</div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted text-center py-3">Tidak ada insiden terbuka</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

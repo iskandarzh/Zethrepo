@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, hapus %}
+{% block title %}{{ i.nomor }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="text-muted small"><a href="{{ url_for('insiden.daftar') }}">Insiden</a> / {{ i.nomor }}</div>
+    <h3 class="mb-1">{{ i.judul }}</h3>
+    <div>{{ badge(c.SEVERITY, i.severity) }} {{ badge(c.STATUS_INSIDEN, i.status) }} <span class="badge text-bg-light">{{ i.kategori }}</span></div>
+  </div>
+  <div class="d-flex gap-2">
+    {% if can_edit() %}<a class="btn btn-outline-primary" href="{{ url_for('insiden.form', iid=i.id) }}"><i class="bi bi-pencil"></i> Ubah / Update Status</a>{% endif %}
+    {% if is_admin() %}{{ hapus(url_for('insiden.hapus', iid=i.id), 'Hapus insiden ' ~ i.nomor ~ '?', small=False) }}{% endif %}
+  </div>
+</div>
+<div class="card"><div class="card-body">
+  <dl class="row mb-0">
+    <dt class="col-sm-3">Waktu kejadian</dt><dd class="col-sm-9">{{ i.waktu_kejadian|tgl }}</dd>
+    <dt class="col-sm-3">Waktu selesai</dt><dd class="col-sm-9">{{ i.waktu_selesai|tgl }}</dd>
+    <dt class="col-sm-3">Durasi</dt><dd class="col-sm-9">{{ i.waktu_kejadian|durasi(i.waktu_selesai) }}{% if not i.waktu_selesai %} (masih berjalan){% endif %}</dd>
+    <dt class="col-sm-3">Ruang</dt><dd class="col-sm-9">{% if i.ruang_id %}<a href="{{ url_for('aset.ruang_detail', rid=i.ruang_id) }}">{{ i.kode_ruang }}</a>{% else %}-{% endif %}</dd>
+    <dt class="col-sm-3">Perangkat</dt><dd class="col-sm-9">{% if i.perangkat_id %}<a href="{{ url_for('aset.perangkat_detail', pid=i.perangkat_id) }}">{{ i.nama_perangkat }}</a>{% else %}-{% endif %}</dd>
+    <dt class="col-sm-3">Pelapor</dt><dd class="col-sm-9">{{ i.nama_pelapor or i.pelapor or '-' }}</dd>
+    <dt class="col-sm-3">Deskripsi</dt><dd class="col-sm-9" style="white-space: pre-line">{{ i.deskripsi or '-' }}</dd>
+    <dt class="col-sm-3">Penanganan</dt><dd class="col-sm-9" style="white-space: pre-line">{{ i.penanganan or '-' }}</dd>
+  </dl>
+</div></div>
+{% endblock %}

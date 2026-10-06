@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}Perangkat{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0"><i class="bi bi-cpu"></i> Perangkat</h3>
+  {% if can_edit() %}<a class="btn btn-primary" href="{{ url_for('aset.perangkat_form') }}"><i class="bi bi-plus-lg"></i> Tambah Perangkat</a>{% endif %}
+</div>
+<form class="card card-body mb-3"><div class="row g-2 align-items-end">
+  <div class="col-md-5"><label class="form-label small">Cari</label><input class="form-control" name="q" value="{{ q }}" placeholder="Nama, serial, merek, model, IP, pemilik"></div>
+  <div class="col-md-3"><label class="form-label small">Jenis</label><select class="form-select" name="jenis"><option value="">Semua</option>
+    {% for j in c.JENIS_PERANGKAT %}<option {% if jenis == j %}selected{% endif %}>{{ j }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><label class="form-label small">Status</label><select class="form-select" name="status"><option value="">Semua</option>
+    {% for k, v in c.STATUS_PERANGKAT.items() %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ v[0] }}</option>{% endfor %}</select></div>
+  <div class="col-md-2 d-grid"><button class="btn btn-outline-primary"><i class="bi bi-search"></i> Tampilkan</button></div>
+</div></form>
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Nama</th><th>Jenis</th><th>Merek / Model</th><th>Serial</th><th>Lokasi</th><th>IP Mgmt</th><th>Pemilik</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for p in rows %}
+      <tr>
+        <td><a href="{{ url_for('aset.perangkat_detail', pid=p.id) }}">{{ p.nama }}</a></td>
+        <td>{{ p.jenis or '-' }}</td>
+        <td>{{ p.merek or '' }} {{ p.model or '' }}</td>
+        <td class="small">{{ p.serial or '-' }}</td>
+        <td class="text-nowrap">{% if p.rak_id %}<a href="{{ url_for('aset.rak_detail', kid=p.rak_id) }}">{{ p.kode_ruang }} / {{ p.kode_rak }}</a>{% if p.posisi_u %} <span class="small text-muted">U{{ p.posisi_u }}</span>{% endif %}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+        <td class="small">{{ p.ip_mgmt or '-' }}</td>
+        <td>{{ p.pemilik or '-' }}</td>
+        <td>{{ badge(c.STATUS_PERANGKAT, p.status) }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Tidak ada perangkat</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

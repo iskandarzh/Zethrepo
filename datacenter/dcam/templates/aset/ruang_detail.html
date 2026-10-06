@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_macros.html" import hapus %}
+{% block title %}Ruang {{ ruang.kode }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="text-muted small"><a href="{{ url_for('aset.ruang_list') }}">Ruang</a> / {{ ruang.kode }}</div>
+    <h3 class="mb-0">{{ ruang.kode }} <small class="text-muted">{{ ruang.nama }}</small></h3>
+    <div class="small text-muted">Lantai {{ ruang.lantai or '-' }} · Batas suhu {{ ruang.suhu_min|angka }}–{{ ruang.suhu_max|angka }}°C · RH {{ ruang.rh_min|angka }}–{{ ruang.rh_max|angka }}%</div>
+    {% if ruang.keterangan %}<div class="mt-1">{{ ruang.keterangan }}</div>{% endif %}
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can_edit() %}
+    <a class="btn btn-outline-primary" href="{{ url_for('patroli.form', ruang_id=ruang.id) }}"><i class="bi bi-clipboard-check"></i> Catat Patroli</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('aset.ruang_form', rid=ruang.id) }}"><i class="bi bi-pencil"></i> Ubah</a>
+    {% endif %}
+    {% if is_admin() %}{{ hapus(url_for('aset.ruang_hapus', rid=ruang.id), 'Hapus ruang ' ~ ruang.kode ~ '?', small=False) }}{% endif %}
+  </div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-semibold"><i class="bi bi-hdd-rack"></i> Rak</span>
+        {% if can_edit() %}<a class="btn btn-sm btn-primary" href="{{ url_for('aset.rak_form', ruang_id=ruang.id) }}"><i class="bi bi-plus-lg"></i> Tambah Rak</a>{% endif %}</div>
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Kode</th><th>Perangkat</th><th>Pemakaian</th></tr></thead>
+        <tbody>
+        {% for k in raks %}
+          {% set pct = (k.terpakai * 100 / k.kapasitas_u)|round|int %}
+          <tr><td><a href="{{ url_for('aset.rak_detail', kid=k.id) }}">{{ k.kode }}</a></td><td>{{ k.jumlah_perangkat }}</td>
+            <td style="min-width: 160px"><div class="progress" role="progressbar" title="{{ k.terpakai }}/{{ k.kapasitas_u }}U"><div class="progress-bar {{ 'bg-danger' if pct > 85 else ('bg-warning' if pct > 70) }}" style="width: {{ pct }}%"></div></div>
+              <div class="small text-muted">{{ k.terpakai }}/{{ k.kapasitas_u }}U ({{ pct }}%)</div></td></tr>
+        {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-3">Belum ada rak</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card"><div class="card-body">
+      <h6 class="card-title"><i class="bi bi-graph-up"></i> Tren Suhu &amp; Kelembaban (60 patroli terakhir)</h6>
+      {% if tren %}<canvas id="tren" height="200"></canvas>{% else %}<div class="text-muted text-center py-4">Belum ada data patroli</div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if tren %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const tren = {{ tren|tojson }};
+  const batas = (v, label, color) => ({ label, data: tren.map(() => v), borderColor: color, borderDash: [4, 4], pointRadius: 0, borderWidth: 1, yAxisID: label.includes('RH') ? 'rh' : 'suhu' });
+  new Chart(document.getElementById('tren'), {
+    type: 'line',
+    data: {
+      labels: tren.map(r => r.waktu.replace('T', ' ')),
+      datasets: [
+        { label: 'Suhu (°C)', data: tren.map(r => r.suhu), borderColor: '#dc3545', tension: .3, yAxisID: 'suhu' },
+        { label: 'RH (%)', data: tren.map(r => r.kelembaban), borderColor: '#0d6efd', tension: .3, yAxisID: 'rh' },
+        batas({{ ruang.suhu_max|tojson }}, 'Batas suhu maks', '#dc354588'),
+        batas({{ ruang.rh_max|tojson }}, 'Batas RH maks', '#0d6efd88'),
+      ]
+    },
+    options: { interaction: { mode: 'index', intersect: false }, scales: {
+      suhu: { position: 'left', title: { display: true, text: '°C' } },
+      rh: { position: 'right', title: { display: true, text: '%' }, grid: { drawOnChartArea: false } } } }
+  });
+</script>
+{% endif %}
+{% endblock %}

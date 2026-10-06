@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, select, sel, csrf %}
+{% block title %}{{ 'Ubah' if insiden else 'Lapor' }} Insiden{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 860px"><div class="card-body p-4">
+  <h4 class="mb-3">{% if insiden %}Ubah Insiden {{ insiden.nomor }}{% else %}Lapor Insiden{% endif %}</h4>
+  <form method="post">{{ csrf() }}
+    <div class="row g-3">
+      {{ field(form, 'judul', 'Judul', required=True, col='col-md-8', extra='autofocus') }}
+      {{ field(form, 'waktu_kejadian', 'Waktu kejadian', 'datetime-local', True, 'col-md-4') }}
+      {{ select(form, 'kategori', 'Kategori', c.KATEGORI_INSIDEN, col='col-md-4', required=True) }}
+      {{ select(form, 'severity', 'Severity', c.SEVERITY, col='col-md-4', required=True) }}
+      {{ select(form, 'status', 'Status', c.STATUS_INSIDEN, col='col-md-4') }}
+      <div class="col-md-6"><label class="form-label">Ruang</label>
+        <select class="form-select" name="ruang_id"><option value="">-</option>
+          {% for r in ruangs %}<option value="{{ r.id }}"{{ sel(form, 'ruang_id', r.id) }}>{{ r.kode }} – {{ r.nama }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">Perangkat terdampak</label>
+        <select class="form-select" name="perangkat_id"><option value="">-</option>
+          {% for p in perangkats %}<option value="{{ p.id }}"{{ sel(form, 'perangkat_id', p.id) }}>{{ p.nama }}{% if p.kode_rak %} ({{ p.kode_ruang }}/{{ p.kode_rak }}){% endif %}</option>{% endfor %}</select></div>
+      {{ textarea(form, 'deskripsi', 'Deskripsi kejadian & dampak', rows=3) }}
+      {{ textarea(form, 'penanganan', 'Penanganan / root cause', rows=3, placeholder='Wajib diisi saat insiden ditutup (status Selesai)') }}
+      {{ field(form, 'waktu_selesai', 'Waktu selesai', 'datetime-local', help='Otomatis diisi saat status Selesai bila kosong') }}
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
+      <a href="{{ url_for('insiden.detail', iid=insiden.id) if insiden else url_for('insiden.daftar') }}" class="btn btn-link">Batal</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

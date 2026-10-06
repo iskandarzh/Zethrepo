@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Laporan{% endblock %}
+{% macro tabel(rows, mapping=None, total=None) -%}
+  <table class="table table-sm mb-0">
+    {% for r in rows %}
+      <tr><td>{{ mapping[r.k][0] if mapping and r.k in mapping else r.k }}</td><td class="text-end fw-semibold">{{ r.n }}</td>
+        {% if total %}<td style="width: 40%"><div class="progress" style="height: 6px"><div class="progress-bar" style="width: {{ (r.n * 100 / total)|round|int }}%"></div></div></td>{% endif %}</tr>
+    {% else %}
+      <tr><td class="text-muted">Tidak ada data</td></tr>
+    {% endfor %}
+  </table>
+{%- endmacro %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h3 class="mb-0"><i class="bi bi-bar-chart"></i> Laporan <small class="text-muted fs-6">{{ dari|tgl }} s/d {{ sampai|tgl }}</small></h3>
+  <form class="d-flex gap-2 no-print">
+    <input type="date" class="form-control" name="dari" value="{{ dari }}">
+    <input type="date" class="form-control" name="sampai" value="{{ sampai }}">
+    <button class="btn btn-outline-primary">Tampilkan</button>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i></button>
+  </form>
+</div>
+
+<div class="card card-body mb-4 no-print">
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <span class="fw-semibold me-2"><i class="bi bi-download"></i> Export CSV:</span>
+    {% for j, label in [('aktivitas', 'Aktivitas'), ('kunjungan', 'Kunjungan'), ('patroli', 'Patroli'), ('insiden', 'Insiden')] %}
+    <a class="btn btn-sm btn-outline-success" href="{{ url_for('laporan.ekspor', jenis=j, dari=dari, sampai=sampai) }}"><i class="bi bi-filetype-csv"></i> {{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% for label, num, sub in [
+    ('Aktivitas', d.aktivitas_total, d.selesai ~ ' selesai · ' ~ d.tepat_waktu ~ ' tepat waktu'),
+    ('Kunjungan', d.kunjungan_total, 'tamu / personel tercatat'),
+    ('Patroli', d.patroli_total, d.patroli_temuan ~ ' dengan temuan'),
+    ('Insiden', d.insiden_total, 'dilaporkan'),
+  ] %}
+  <div class="col-6 col-lg-3"><div class="card stat h-100"><div class="card-body">
+    <div class="text-muted small">{{ label }}</div><div class="num">{{ num }}</div><div class="small text-muted">{{ sub }}</div>
+  </div></div></div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <h6>Aktivitas per status</h6>{{ tabel(d.aktivitas_status, c.STATUS_AKTIVITAS, d.aktivitas_total) }}
+    <h6 class="mt-4">Aktivitas per jenis</h6>{{ tabel(d.aktivitas_jenis, None, d.aktivitas_total) }}
+  </div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <h6>Insiden per severity</h6>{{ tabel(d.insiden_severity, c.SEVERITY, d.insiden_total) }}
+    <h6 class="mt-4">Insiden per kategori</h6>{{ tabel(d.insiden_kategori, None, d.insiden_total) }}
+  </div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <h6>Kunjungan per perusahaan (10 teratas)</h6>{{ tabel(d.kunjungan_perusahaan, None, d.kunjungan_total) }}
+    <h6 class="mt-4">Lingkungan per ruang</h6>
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Ruang</th><th>Suhu min/rata/maks</th><th>RH min/rata/maks</th></tr></thead>
+      {% for kode, s in d.lingkungan %}
+      <tr><td>{{ kode }}</td>
+        <td>{% if s.suhu %}{{ s.suhu|min|angka }} / {{ '%.1f'|format(s.suhu|sum / s.suhu|length) }} / {{ s.suhu|max|angka }}°C{% else %}-{% endif %}</td>
+        <td>{% if s.rh %}{{ s.rh|min|angka }} / {{ '%.1f'|format(s.rh|sum / s.rh|length) }} / {{ s.rh|max|angka }}%{% else %}-{% endif %}</td></tr>
+      {% else %}<tr><td colspan="3" class="text-muted">Tidak ada data</td></tr>{% endfor %}
+    </table>
+  </div></div></div>
+</div>
+{% endblock %}
