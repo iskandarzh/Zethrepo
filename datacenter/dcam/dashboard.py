@@ -5,7 +5,7 @@ from flask import Blueprint, render_template
 from .db import get_db
 from .insiden import SELECT_INSIDEN, URUT_SEVERITY
 from .patroli import temuan
-from .util import today
+from .util import now_local, today
 
 bp = Blueprint("dashboard", __name__)
 
@@ -35,14 +35,17 @@ def index():
     ).fetchall()
     tamu = db.execute(
         """SELECT k.*, r.kode AS kode_ruang FROM kunjungan k LEFT JOIN ruang r ON r.id = k.ruang_id
-           WHERE k.keluar IS NULL ORDER BY k.masuk"""
+           WHERE k.keluar IS NULL AND k.masuk <= ? ORDER BY k.masuk""",
+        (now_local(),),
     ).fetchall()
     insiden = db.execute(
         SELECT_INSIDEN + f" WHERE i.status != 'selesai' ORDER BY {URUT_SEVERITY}, i.waktu_kejadian"
     ).fetchall()
     kondisi = []
     for r in db.execute(
-        """SELECT r.id AS rid, r.kode AS kode_ruang, r.nama AS nama_ruang, r.suhu_min, r.suhu_max, r.rh_min, r.rh_max, p.*
+        """SELECT r.id AS rid, r.kode AS kode_ruang, r.nama AS nama_ruang, p.*,
+                  COALESCE(p.batas_suhu_min, r.suhu_min) AS suhu_min, COALESCE(p.batas_suhu_max, r.suhu_max) AS suhu_max,
+                  COALESCE(p.batas_rh_min, r.rh_min) AS rh_min, COALESCE(p.batas_rh_max, r.rh_max) AS rh_max
            FROM ruang r
            LEFT JOIN patroli p ON p.id = (SELECT id FROM patroli WHERE ruang_id = r.id ORDER BY waktu DESC, id DESC LIMIT 1)
            ORDER BY r.kode"""

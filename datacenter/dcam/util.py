@@ -1,3 +1,4 @@
+import math
 from datetime import date, datetime
 from functools import wraps
 
@@ -31,7 +32,7 @@ def can_edit():
 
 
 def safe_next(value, fallback):
-    if value and value.startswith("/") and not value.startswith("//"):
+    if value and value.startswith("/") and not value.startswith("//") and "\\" not in value:
         return value
     return fallback
 
@@ -61,9 +62,12 @@ def f_float(name, label=None, required=False):
     if value is None:
         return None
     try:
-        return float(value.replace(",", "."))
+        number = float(value.replace(",", "."))
     except ValueError:
+        number = None
+    if number is None or not math.isfinite(number):
         raise ValueError(f"{label or name}: '{value}' bukan angka")
+    return number
 
 
 def f_datetime(name, label=None, required=False):

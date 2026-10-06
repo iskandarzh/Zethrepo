@@ -113,6 +113,10 @@ CREATE TABLE IF NOT EXISTS patroli (
     kebakaran TEXT NOT NULL DEFAULT 'normal',
     keamanan TEXT NOT NULL DEFAULT 'normal',
     kebersihan TEXT NOT NULL DEFAULT 'normal',
+    batas_suhu_min REAL,
+    batas_suhu_max REAL,
+    batas_rh_min REAL,
+    batas_rh_max REAL,
     catatan TEXT,
     petugas_id INTEGER REFERENCES pengguna(id) ON DELETE SET NULL
 );
@@ -167,7 +171,13 @@ def close_db(_exc=None):
 def init_app(app):
     app.teardown_appcontext(close_db)
     with app.app_context():
-        get_db().executescript(SCHEMA)
+        db = get_db()
+        db.executescript(SCHEMA)
+        kolom = {r["name"] for r in db.execute("PRAGMA table_info(patroli)")}
+        for k in ("batas_suhu_min", "batas_suhu_max", "batas_rh_min", "batas_rh_max"):
+            if k not in kolom:
+                db.execute(f"ALTER TABLE patroli ADD COLUMN {k} REAL")
+        db.commit()
 
 
 def audit(aksi, objek, detail=""):

@@ -75,7 +75,9 @@ def _form_data():
         perangkat = db.execute("SELECT rak_id FROM perangkat WHERE id = ?", (data["perangkat_id"],)).fetchone()
         if perangkat is None:
             raise ValueError("Perangkat tidak ditemukan")
-        if not data["rak_id"]:
+        if perangkat["rak_id"]:
+            if data["rak_id"] and data["rak_id"] != perangkat["rak_id"]:
+                raise ValueError("Perangkat yang dipilih tidak berada di rak tersebut")
             data["rak_id"] = perangkat["rak_id"]
     if data["rak_id"]:
         rak = db.execute("SELECT ruang_id FROM rak WHERE id = ?", (data["rak_id"],)).fetchone()
@@ -90,7 +92,7 @@ def _form_data():
 def _render_form(aktivitas, form):
     return render_template(
         "aktivitas/form.html", aktivitas=aktivitas, form=form,
-        ruangs=daftar_ruang(), raks=daftar_rak(), perangkats=daftar_perangkat(),
+        ruangs=daftar_ruang(), raks=daftar_rak(), perangkats=daftar_perangkat(aktivitas["perangkat_id"] if aktivitas else None),
     )
 
 

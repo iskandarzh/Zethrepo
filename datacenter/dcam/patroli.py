@@ -8,7 +8,9 @@ from .util import admin_required, arg_date, f_choice, f_datetime, f_float, f_int
 bp = Blueprint("patroli", __name__, url_prefix="/patroli")
 
 SELECT_PATROLI = """
-SELECT p.*, r.kode AS kode_ruang, r.nama AS nama_ruang, r.suhu_min, r.suhu_max, r.rh_min, r.rh_max,
+SELECT p.*, r.kode AS kode_ruang, r.nama AS nama_ruang,
+       COALESCE(p.batas_suhu_min, r.suhu_min) AS suhu_min, COALESCE(p.batas_suhu_max, r.suhu_max) AS suhu_max,
+       COALESCE(p.batas_rh_min, r.rh_min) AS rh_min, COALESCE(p.batas_rh_max, r.rh_max) AS rh_max,
        u.username AS petugas, u.nama AS nama_petugas
 FROM patroli p
 JOIN ruang r ON r.id = p.ruang_id
@@ -54,9 +56,13 @@ def daftar():
     if ruang_id:
         sql += " AND p.ruang_id = ?"
         params.append(ruang_id)
-    rows = [(r, temuan(r)) for r in get_db().execute(sql + " ORDER BY p.waktu DESC LIMIT 500", params)]
-    if hanya_temuan:
-        rows = [(r, t) for r, t in rows if t]
+    rows = []
+    for r in get_db().execute(sql + " ORDER BY p.waktu DESC" + ("" if hanya_temuan else " LIMIT 500"), params):
+        t = temuan(r)
+        if t or not hanya_temuan:
+            rows.append((r, t))
+            if len(rows) >= 500:
+                break
     return render_template(
         "patroli/list.html", rows=rows, ruangs=daftar_ruang(), dari=dari or "", sampai=sampai or "",
         ruang_id=ruang_id, hanya_temuan=hanya_temuan,
@@ -75,8 +81,11 @@ def _form_data():
         data[kolom] = f_choice(kolom, KONDISI, label, "normal")
     if data["kelembaban"] is not None and not 0 <= data["kelembaban"] <= 100:
         raise ValueError("Kelembaban harus 0–100%")
-    if not get_db().execute("SELECT 1 FROM ruang WHERE id = ?", (data["ruang_id"],)).fetchone():
+    ruang = get_db().execute("SELECT * FROM ruang WHERE id = ?", (data["ruang_id"],)).fetchone()
+    if ruang is None:
         raise ValueError("Ruang tidak ditemukan")
+    for k in ("suhu_min", "suhu_max", "rh_min", "rh_max"):
+        data["batas_" + k] = ruang[k]
     return data
 
 
@@ -95,6 +104,9 @@ def form(pid=None):
             flash(str(e), "danger")
             return _render_form(patroli, request.form)
         db = get_db()
+        if patroli and patroli["ruang_id"] == data["ruang_id"] and patroli["batas_suhu_max"] is not None:
+            for k in ("suhu_min", "suhu_max", "rh_min", "rh_max"):
+                data["batas_" + k] = patroli["batas_" + k]
         cols = list(data)
         if patroli:
             db.execute(f"UPDATE patroli SET {', '.join(f'{k} = ?' for k in cols)} WHERE id = ?", [data[k] for k in cols] + [pid])

@@ -72,7 +72,7 @@ def _form_data():
 
 def _render_form(insiden, form):
     return render_template(
-        "insiden/form.html", insiden=insiden, form=form, ruangs=daftar_ruang(), perangkats=daftar_perangkat()
+        "insiden/form.html", insiden=insiden, form=form, ruangs=daftar_ruang(), perangkats=daftar_perangkat(insiden["perangkat_id"] if insiden else None)
     )
 
 

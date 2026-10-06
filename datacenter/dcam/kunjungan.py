@@ -29,7 +29,8 @@ def daftar():
     sql = SELECT_KUNJUNGAN + " WHERE 1 = 1"
     params = []
     if di_dalam:
-        sql += " AND k.keluar IS NULL"
+        sql += " AND k.keluar IS NULL AND k.masuk <= ?"
+        params.append(now_local())
     if tanggal:
         sql += " AND date(k.masuk) <= ? AND (k.keluar IS NULL OR date(k.keluar) >= ?)"
         params += [tanggal, tanggal]

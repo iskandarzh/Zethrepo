@@ -19,11 +19,12 @@ def daftar_rak():
     ).fetchall()
 
 
-def daftar_perangkat():
+def daftar_perangkat(termasuk=None):
     return get_db().execute(
         """SELECT d.id, d.nama, d.jenis, d.rak_id, k.kode AS kode_rak, r.kode AS kode_ruang
            FROM perangkat d LEFT JOIN rak k ON k.id = d.rak_id LEFT JOIN ruang r ON r.id = k.ruang_id
-           WHERE d.status != 'decommissioned' ORDER BY d.nama"""
+           WHERE d.status != 'decommissioned' OR d.id = ? ORDER BY d.nama""",
+        (termasuk,),
     ).fetchall()
 
 
